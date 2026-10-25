@@ -1,0 +1,294 @@
+/*
+ * DeepSeek Harness mobile layout fixes.
+ *
+ * Every rule is gated twice: html[data-dmf] is set by the client module only in
+ * a browser layout (not the macOS or Windows desktop shells), and the media
+ * queries keep the desktop layout untouched above 767px. Harness styles are CSS
+ * modules whose class names look like `<hash>_<localName>`, so components are
+ * matched by the `_<localName>` suffix; scripts/check-upstream.mjs verifies that
+ * each local name used here still exists in a Harness checkout.
+ */
+
+/* Plugin-owned chrome exists on every page but only shows in the mobile layout. */
+[data-dmf-menu],
+[data-dmf-backdrop] {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  /* ── Left sidebar: an off-canvas drawer instead of a 56px rail ─────────────
+     AppFrame keeps a grid track for the sidebar (56px rail, or the expanded
+     width). The centre spans that track too, so it reaches the left edge, and
+     the sidebar column floats above it. */
+  html[data-dmf] [class*="_frame"]:has(> [data-shell-bottom]) > [class*="_centerCol"] {
+    grid-column: 1 / 3;
+    grid-row: 1;
+  }
+
+  html[data-dmf] [class*="_frame"]:has(> [data-shell-bottom]) > [class*="_rightbarCol"] {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  html[data-dmf] [class*="_frame"]:has(> [data-shell-bottom]) > [class*="_sidebarCol"] {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 900;
+    width: min(304px, 86vw);
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) env(safe-area-inset-left);
+    box-sizing: border-box;
+    border-right: none;
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 220ms var(--ds-ease-in-out, ease), visibility 0s linear 220ms;
+  }
+
+  html[data-dmf] [class*="_frame"]:has(> [data-shell-bottom]):not([data-sidebar-collapsed]) > [class*="_sidebarCol"] {
+    transform: none;
+    visibility: visible;
+    box-shadow: var(--dsw-elevation-prominent);
+    transition: transform 220ms var(--ds-ease-in-out, ease);
+  }
+
+  /* The sidebar freezes an inline width for its crossfade; the drawer owns the width now. */
+  html[data-dmf] [class*="_frame"]:has(> [data-shell-bottom]) > [class*="_sidebarCol"] > * {
+    width: 100% !important;
+  }
+
+  /* No resize handle on a drawer. */
+  html[data-dmf] [class*="_frame"]:has(> [data-shell-bottom]) > [class*="_handle"] {
+    display: none;
+  }
+
+  /* The conversation header already pads its title by the frame's published
+     leading clearance (the macOS traffic-light band); publish the menu button's
+     band the same way. */
+  html[data-dmf] [class*="_frame"][data-sidebar-collapsed]:has(> [data-shell-bottom]) {
+    --dsh-frame-leading-clearance: 58px;
+  }
+
+  /* Full-page panels (plugins, automation, …) start their title at the top-left
+     corner; move it below the menu button. */
+  html[data-dmf][data-dmf-panel] [class*="_frame"][data-sidebar-collapsed]:has(> [data-shell-bottom]) > [class*="_centerCol"] {
+    padding-top: 24px;
+    box-sizing: border-box;
+  }
+
+  html[data-dmf] [class*="_frame"]:has(> [data-shell-bottom]) {
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    box-sizing: border-box;
+  }
+
+  /* ── Plugin-owned chrome: menu button and drawer backdrop ─────────────── */
+  html[data-dmf] [data-dmf-menu] {
+    position: fixed;
+    top: calc(env(safe-area-inset-top) + 5px);
+    left: calc(env(safe-area-inset-left) + 8px);
+    z-index: 35;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: none;
+    border-radius: var(--dsw-radius-md, 12px);
+    background: transparent;
+    color: var(--dsw-alias-label-secondary, #61666b);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html[data-dmf] [data-dmf-menu]:active {
+    background: var(--dsw-alias-interactive-bg-active, #2631481a);
+  }
+
+  html[data-dmf][data-dmf-drawer] [data-dmf-menu],
+  html[data-dmf]:has([data-rightbar-fullscreen]) [data-dmf-menu] {
+    display: none;
+  }
+
+  html[data-dmf] [data-dmf-backdrop] {
+    position: fixed;
+    inset: 0;
+    z-index: 899;
+    display: block;
+    background: var(--dsw-alias-bg-mask-1, #0000003d);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 220ms var(--ds-ease-in-out, ease);
+  }
+
+  html[data-dmf][data-dmf-drawer] [data-dmf-backdrop] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ── Settings: a full-screen sheet with a scrolling tab strip ─────────────
+     The 0.2.x panel is an 800px card with a 188px navigation rail beside the
+     options, which leaves ~120px for every row on a phone. The panel becomes a
+     grid; nav and content dissolve (display: contents) so their children can
+     take the title / close / tabs / options areas. */
+  html[data-dmf] [class*="_overlay"]:has(> [class*="_panel"] > [class*="_nav"] > [class*="_navList"]) {
+    align-items: stretch;
+    justify-content: stretch;
+  }
+
+  html[data-dmf] [class*="_panel"]:has(> [class*="_nav"] > [class*="_navList"]):has(> [class*="_content"] > [class*="_options"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      'title header'
+      'nav nav'
+      'options options';
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+    box-sizing: border-box;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  html[data-dmf] [class*="_panel"] > [class*="_nav"]:has(> [class*="_navList"]),
+  html[data-dmf] [class*="_panel"] > [class*="_content"]:has(> [class*="_options"]) {
+    display: contents;
+  }
+
+  html[data-dmf] [class*="_nav"] > [class*="_navTitle"] {
+    grid-area: title;
+    align-self: center;
+    padding: 12px 0 0 20px;
+    font-size: 18px;
+    line-height: 26px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  html[data-dmf] [class*="_content"] > [class*="_header"]:has(+ [class*="_options"]) {
+    grid-area: header;
+    height: auto;
+    padding: 12px 10px 0 8px;
+  }
+
+  html[data-dmf] [class*="_content"] > [class*="_header"]:has(+ [class*="_options"]) [class*="_close"] {
+    width: 40px;
+    height: 40px;
+  }
+
+  html[data-dmf] [class*="_nav"] > [class*="_navList"] {
+    grid-area: nav;
+    flex-direction: row;
+    gap: 6px;
+    padding: 10px 16px 12px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    border-bottom: 0.5px solid var(--dsw-alias-border-l2, #0000001a);
+  }
+
+  html[data-dmf] [class*="_nav"] > [class*="_navList"]::-webkit-scrollbar {
+    display: none;
+  }
+
+  html[data-dmf] [class*="_navList"] > [class*="_navCell"] {
+    flex: none;
+    height: 36px;
+    padding: 0 14px 0 12px;
+    border-radius: 18px;
+    white-space: nowrap;
+  }
+
+  html[data-dmf] [class*="_navCell"] > [class*="_navLabel"] {
+    flex: none;
+    overflow: visible;
+  }
+
+  html[data-dmf] [class*="_content"] > [class*="_options"] {
+    grid-area: options;
+    min-width: 0;
+    padding: 4px 16px calc(24px + env(safe-area-inset-bottom));
+    overscroll-behavior-y: contain;
+  }
+
+  /* Setting rows (title + description beside a control): the text column keeps
+     a readable width and the control wraps under it instead of squeezing it to
+     a letter per line. */
+  html[data-dmf] [class*="_options"] [class*="_row"]:has(> [class*="_rowText"]) {
+    flex-wrap: wrap;
+    row-gap: 10px;
+  }
+
+  html[data-dmf] [class*="_options"] [class*="_row"] > [class*="_rowText"] {
+    flex: 1 1 180px;
+    padding-right: 0;
+  }
+
+  html[data-dmf] [class*="_options"] [class*="_row"]:has(> [class*="_rowText"]) > :not([class*="_rowText"]) {
+    max-width: 100%;
+  }
+
+  html[data-dmf] [class*="_options"] [class*="_selector"] {
+    max-width: 100%;
+    white-space: nowrap;
+  }
+
+  /* Light / dark / system: one row of three instead of three full-width cards. */
+  html[data-dmf] [class*="_options"] [class*="_cubeRow"] {
+    flex-wrap: nowrap;
+  }
+
+  html[data-dmf] [class*="_cubeRow"] > [class*="_themeCube"] {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 14px 4px;
+  }
+}
+
+/* ── Touch: hover-only affordances and focus zoom ─────────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  /* Session and workspace row actions (archive, pin, menu) only appear on
+     hover. Keep them on the selected session and on workspace rows. */
+  html[data-dmf] [class*="_sessionRow"][class*="_selected"] [class*="_rowActions"],
+  html[data-dmf] [class*="_projectRow"] [class*="_rowActions"] {
+    display: inline-flex;
+  }
+
+  html[data-dmf] [class*="_sessionRow"][class*="_selected"] [class*="_time"],
+  html[data-dmf] [class*="_sessionRow"][class*="_selected"] [class*="_pinIndicator"] {
+    display: none;
+  }
+
+  /* 16px glyph buttons get a 32px hit area without moving the glyph. */
+  html[data-dmf] [class*="_rowActions"] > [class*="_iconButton"] {
+    width: 32px;
+    height: 32px;
+    margin: -8px;
+  }
+
+  html[data-dmf] [class*="_rowActions"] {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 767px) and (pointer: coarse) {
+  /* iOS zooms the page when a focused field's text is under 16px. */
+  html[data-dmf] [contenteditable='true'],
+  html[data-dmf] [contenteditable='plaintext-only'],
+  html[data-dmf] textarea,
+  html[data-dmf] input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']) {
+    font-size: 16px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-dmf] [class*="_frame"]:has(> [data-shell-bottom]) > [class*="_sidebarCol"],
+  html[data-dmf] [data-dmf-backdrop] {
+    transition: none !important;
+  }
+}

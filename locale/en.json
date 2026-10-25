@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Mobile layout fixes",
+    "description": "Turns the sidebar into a drawer, makes Settings a full-screen sheet and fixes touch and zoom issues on phones."
+  }
+}

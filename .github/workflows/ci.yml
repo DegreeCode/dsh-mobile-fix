@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Weekly drift check against upstream master (Mondays 00:00 UTC / 09:00 KST).
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: client.js matches src/
+        run: npm run check
+      - name: Module syntax
+        run: node --check client.js && node --check index.js
+      - name: Display metadata parses
+        run: for f in locale/*.json; do node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))" || exit 1; done
+      - name: Runtime tests
+        run: npm test
+      - name: Packed file list
+        run: npm pack --dry-run
+
+  upstream:
+    name: Upstream ${{ matrix.name }}
+    needs: package
+    runs-on: ubuntu-latest
+    # The pinned release must pass; latest master reports drift without blocking.
+    continue-on-error: ${{ matrix.name == 'master' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: base
+            # dsh-v0.2.1-rc.3
+            ref: 1f81c047fc48fa190a683e469daa699857e9afe8
+          - name: master
+            ref: master
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: pack
+      - uses: actions/checkout@v4
+        with:
+          repository: deepseek-ai/deepseek-harness
+          ref: ${{ matrix.ref }}
+          path: dsh
+          sparse-checkout: |
+            packages/client
+            package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Selectors, attributes and layout service still exist
+        run: node pack/scripts/check-upstream.mjs dsh
