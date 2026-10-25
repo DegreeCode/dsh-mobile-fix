@@ -1,5 +1,7 @@
 # DeepSeek Harness 모바일 레이아웃 개선
 
+**한국어** · [English](README.en.md) · [中文](README.zh.md) · [日本語](README.ja.md)
+
 [![CI](https://github.com/DegreeCode/dsh-mobile-fix/actions/workflows/ci.yml/badge.svg)](https://github.com/DegreeCode/dsh-mobile-fix/actions/workflows/ci.yml)
 
 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 웹 UI를 휴대폰에서 쓰기 편하게 바꾸는 플러그인입니다. 본체 코드를 고치지 않고, 클라이언트 모듈(`dsh.client`) 하나가 스타일시트와 몇 가지 동작을 더합니다.
