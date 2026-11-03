@@ -412,3 +412,125 @@ test('a scrolling gesture cancels long press, and disposal cancels pending toolt
   await new Promise(resolve => window.setTimeout(resolve, 580))
   assert.equal(document.querySelector('[role="tooltip"]'), null)
 })
+
+test('a second activation closes Team and subagent popovers through native Escape dismissal', () => {
+  const { window, document } = setup({ body: ACTION_FRAME })
+  for (const id of ['team', 'subagents', 'jobs']) {
+    const button = document.querySelector(`#${id}`)
+    let activations = 0
+    let dismissals = 0
+    // Match Harness: jobs toggles, while Team/subagents only open on click.
+    button.addEventListener('click', () => {
+      activations++
+      const next = id === 'jobs' ? button.getAttribute('aria-expanded') !== 'true' : true
+      button.setAttribute('aria-expanded', String(next))
+    })
+    const nativeDismiss = event => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      button.setAttribute('aria-expanded', 'false')
+      dismissals++
+    }
+    const target = id === 'team' ? document : button.parentElement
+    target.addEventListener('keydown', nativeDismiss)
+    button.click()
+    assert.equal(button.getAttribute('aria-expanded'), 'true')
+    button.click()
+    assert.equal(button.getAttribute('aria-expanded'), 'false', `${id} closes on a second activation`)
+    assert.equal(activations, id === 'jobs' ? 2 : 1)
+    assert.equal(dismissals, id === 'jobs' ? 0 : 1)
+    button.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    button.click()
+    assert.equal(button.getAttribute('aria-expanded'), 'true', `${id} can reopen`)
+    button.click()
+    assert.equal(button.getAttribute('aria-expanded'), 'false')
+    target.removeEventListener('keydown', nativeDismiss)
+  }
+})
+
+test('compatibility mouse events do not invoke native hover-open handlers', async () => {
+  const { window, document } = setup({ body: ACTION_FRAME })
+  const button = document.querySelector('#subagents')
+  let nativeHover = 0
+  button.parentElement.addEventListener('mouseover', () => { nativeHover++ })
+  button.parentElement.addEventListener('pointerover', () => { nativeHover++ })
+  for (const type of ['pointerover', 'mouseover']) {
+    const event = new window.Event(type, { bubbles: true })
+    Object.assign(event, { pointerType: 'mouse' })
+    button.dispatchEvent(event)
+  }
+  await new Promise(resolve => window.setTimeout(resolve, 430))
+  assert.equal(nativeHover, 0)
+  assert.equal(button.getAttribute('aria-expanded'), 'false')
+  assert.equal(document.querySelector('[role="tooltip"]').hidden, false)
+})
+
+test('mouse-out from a portal cannot synthesize mouse-enter on an action', () => {
+  const { window, document } = setup({ body: ACTION_FRAME })
+  const button = document.querySelector('#subagents')
+  const portal = document.body.appendChild(document.createElement('div'))
+  let mouseOut = 0
+  let pointerOut = 0
+  document.body.addEventListener('mouseout', () => { mouseOut++ })
+  document.body.addEventListener('pointerout', () => { pointerOut++ })
+  for (const type of ['mouseout', 'pointerout']) {
+    const event = new window.Event(type, { bubbles: true })
+    Object.assign(event, { relatedTarget: button.querySelector('svg') })
+    portal.dispatchEvent(event)
+  }
+  assert.equal(mouseOut, 0, 'React must not receive the mouse-out that synthesizes enter on the destination')
+  assert.equal(pointerOut, 1, 'native pointer-based tooltips can still handle leave')
+})
+
+test('native touch holds remain visible through pointer cancellation, release, blur and mouse compatibility events', () => {
+  const { window, document } = setup({ body: ACTION_FRAME })
+  const emit = (target, type, properties = {}) => {
+    const event = new window.Event(type, { bubbles: true, cancelable: true })
+    Object.assign(event, properties)
+    target.dispatchEvent(event)
+    return event
+  }
+  for (const id of ['team', 'subagents', 'jobs']) for (const open of [false, true]) {
+    const button = document.querySelector(`#${id}`)
+    button.setAttribute('aria-expanded', String(open))
+    let clicks = 0
+    const click = () => { clicks++ }
+    button.addEventListener('click', click)
+    const point = { identifier: 7, clientX: 100, clientY: 30 }
+    emit(button, 'pointerdown', { pointerType: 'touch', pointerId: 7, ...point })
+    emit(button, 'touchstart', { touches: [point] })
+    emit(button, 'pointercancel', { pointerType: 'touch', pointerId: 7 })
+    // The browser's hold recognizer can fire contextmenu before our timer.
+    assert.equal(emit(button, 'contextmenu').defaultPrevented, true)
+    const tooltip = document.querySelector('[role="tooltip"]')
+    assert.equal(tooltip.hidden, false, `${id} explains both closed and open popovers`)
+    emit(button, 'pointerout', { pointerType: 'touch' })
+    emit(button, 'focusout')
+    emit(button, 'touchend', { changedTouches: [point] })
+    emit(button, 'mouseout')
+    emit(button, 'mouseover')
+    button.click()
+    assert.equal(clicks, 0, `${id}'s hold never activates its click handler`)
+    assert.equal(tooltip.hidden, false, `${id}'s explanation stays after release`)
+    document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    assert.equal(tooltip.hidden, true)
+    button.removeEventListener('click', click)
+  }
+})
+
+test('native touch movement cancels a pending hold even after the pointer stream ends', async () => {
+  const { window, document } = setup({ body: ACTION_FRAME })
+  const button = document.querySelector('#jobs')
+  const emit = (type, properties) => {
+    const event = new window.Event(type, { bubbles: true })
+    Object.assign(event, properties)
+    button.dispatchEvent(event)
+  }
+  const point = { identifier: 7, clientX: 100, clientY: 30 }
+  emit('pointerdown', { pointerType: 'touch', pointerId: 7, ...point })
+  emit('touchstart', { touches: [point] })
+  emit('pointercancel', { pointerType: 'touch', pointerId: 7 })
+  emit('touchmove', { touches: [{ ...point, clientX: 125 }] })
+  await new Promise(resolve => window.setTimeout(resolve, 580))
+  assert.equal(document.querySelector('[role="tooltip"]'), null)
+})

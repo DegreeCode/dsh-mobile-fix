@@ -20,6 +20,8 @@ export function installHeaderActions({ doc, win, media, preference }) {
   let suppressClick = null
   let hoverTimer = null
   let tooltipAnchor = null
+  let tooltipSource = null
+  let dismissing = false
   const listen = (target, type, handler, options) => {
     target.addEventListener(type, handler, options)
     cleanups.push(() => target.removeEventListener(type, handler, options))
@@ -45,17 +47,20 @@ export function installHeaderActions({ doc, win, media, preference }) {
     cancelHover()
     if (tooltipAnchor) describe(tooltipAnchor, false)
     tooltipAnchor = null
+    tooltipSource = null
     tooltip.hidden = true
   }
   const cancelPress = () => { if (press) win.clearTimeout(press.timer); press = null }
-  const show = button => {
+  const show = (button, source = 'hover') => {
     const entry = entries.get(button)
-    if (!active() || !entry || !button.isConnected || button.getAttribute('aria-expanded') === 'true') return
+    if (!active() || !entry || !button.isConnected) return
+    if (source !== 'touch' && button.getAttribute('aria-expanded') === 'true') return
     if (tooltipAnchor !== button) hide()
     tooltip.textContent = entry.label
     if (!tooltip.isConnected) doc.body.append(tooltip)
     tooltip.hidden = false
     tooltipAnchor = button
+    tooltipSource = source
     describe(button, true)
     const rect = button.getBoundingClientRect()
     const box = tooltip.getBoundingClientRect()
@@ -117,8 +122,8 @@ export function installHeaderActions({ doc, win, media, preference }) {
       const badge = Number(count.replaceAll(',', '')) > 99 ? '99+' : count
       if (entry.badge.textContent !== badge) entry.badge.textContent = badge
       if (tooltipAnchor === button) {
-        if (button.getAttribute('aria-expanded') === 'true') hide()
-        else if (tooltip.textContent !== entry.label) show(button)
+        if (tooltipSource !== 'touch' && button.getAttribute('aria-expanded') === 'true') hide()
+        else if (tooltip.textContent !== entry.label) show(button, tooltipSource)
       }
     }
   }
@@ -162,64 +167,143 @@ export function installHeaderActions({ doc, win, media, preference }) {
     const button = event.target instanceof win.Element ? event.target.closest('button[data-dmf-action]') : null
     return button && !button.disabled && active() ? button : null
   }
-  listen(doc, 'pointerover', event => {
+  const hoverIn = event => {
     const button = action(event)
-    if (!button || event.pointerType === 'touch') return
+    if (!button) return
     // Host subagent hover opens a catalog. In compact mode hover explains the
     // icon; clicking still reaches the unchanged host handler and opens it.
     event.stopPropagation()
+    if (event.pointerType === 'touch' || press || tooltipSource === 'touch') return
     if (event.relatedTarget && button.contains(event.relatedTarget)) return
     hovered = button
     cancelHover()
-    hoverTimer = win.setTimeout(() => { show(button) }, 400)
-  }, { capture: true })
-  listen(doc, 'pointerout', event => {
+    hoverTimer = win.setTimeout(() => { show(button, 'hover') }, 400)
+  }
+  const hoverOut = event => {
     const button = action(event)
-    if (!button || (event.relatedTarget && button.contains(event.relatedTarget))) return
+    if (!button) {
+      // React can synthesize mouse-enter for the destination from a portal's
+      // mouse-out, before the destination's mouse-over reaches the document.
+      // Pointer-out still passes through so other native tooltips can leave.
+      const next = event.relatedTarget instanceof win.Element
+        ? event.relatedTarget.closest('button[data-dmf-action]') : null
+      if (event.type === 'mouseout' && next && active()) event.stopPropagation()
+      return
+    }
+    event.stopPropagation()
+    if (event.pointerType === 'touch' || press || tooltipSource === 'touch') return
+    if (event.relatedTarget && button.contains(event.relatedTarget)) return
     hovered = null
     if (focused !== button) hide()
-  }, { capture: true })
+  }
+  // Released Harness versions use React mouse enter; others use pointer enter.
+  // Suppress both so a compatibility mouse event cannot race the tooltip.
+  for (const type of ['pointerover', 'mouseover']) listen(doc, type, hoverIn, { capture: true })
+  for (const type of ['pointerout', 'mouseout']) listen(doc, type, hoverOut, { capture: true })
   listen(doc, 'focusin', event => {
     const button = action(event)
-    if (button && keyboard) { focused = button; show(button) }
+    if (button && keyboard && !dismissing) { focused = button; show(button, 'focus') }
   })
   listen(doc, 'focusout', event => {
     const button = action(event)
-    if (button) { focused = null; if (hovered !== button) hide() }
+    if (button) { focused = null; if (hovered !== button && tooltipSource !== 'touch') hide() }
   })
+  const hold = pending => {
+    if (press !== pending || pending.shown) return
+    win.clearTimeout(pending.timer)
+    pending.shown = true
+    suppressClick = pending.button
+    show(pending.button, 'touch')
+  }
+  const beginPress = (button, point, input, id) => {
+    cancelPress()
+    const pending = { button, x: point.clientX, y: point.clientY, input, id, shown: false, timer: null }
+    pending.timer = win.setTimeout(() => { hold(pending) }, 550)
+    press = pending
+  }
+  const endPress = () => {
+    if (press?.shown) suppressClick = press.button
+    cancelPress()
+  }
+  const movePress = point => {
+    if (press && Math.hypot(point.clientX - press.x, point.clientY - press.y) > 10) { cancelPress(); hide() }
+  }
   listen(doc, 'pointerdown', event => {
     keyboard = false
+    hovered = focused = null
     suppressClick = null
     hide()
     cancelPress()
     const button = action(event)
     if (!button || event.pointerType !== 'touch' || event.isPrimary === false) return
-    const pending = { button, x: event.clientX, y: event.clientY, shown: false, timer: null }
-    pending.timer = win.setTimeout(() => {
-      if (press !== pending) return
-      pending.shown = true
-      show(button)
-    }, 550)
-    press = pending
+    beginPress(button, event, 'pointer', event.pointerId)
   }, { capture: true, passive: true })
   listen(doc, 'pointermove', event => {
-    if (press && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 10) { cancelPress(); hide() }
+    if (press?.input === 'pointer' && press.id === event.pointerId) movePress(event)
   }, { passive: true })
   listen(doc, 'pointerup', () => {
-    if (press?.shown) suppressClick = press.button
-    cancelPress()
+    if (press?.input === 'pointer') endPress()
   }, { capture: true, passive: true })
-  listen(doc, 'pointercancel', () => { cancelPress(); hide() }, { passive: true })
-  listen(doc, 'contextmenu', event => { if (action(event)) event.preventDefault() })
+  listen(doc, 'pointercancel', () => {
+    // Touch streams can continue after the browser cancels pointer events for
+    // a native hold gesture. Let touchend/touchcancel own that stream.
+    if (press?.input === 'touch') return
+    endPress()
+    if (tooltipSource !== 'touch') hide()
+  }, { passive: true })
+  listen(doc, 'touchstart', event => {
+    const button = action(event)
+    if (event.touches.length !== 1) { cancelPress(); hide(); return }
+    if (!button) return
+    keyboard = false
+    beginPress(button, event.touches[0], 'touch', event.touches[0].identifier)
+  }, { capture: true, passive: true })
+  listen(doc, 'touchmove', event => {
+    if (press?.input !== 'touch') return
+    const point = [...event.touches].find(touch => touch.identifier === press.id)
+    if (point) movePress(point)
+  }, { capture: true, passive: true })
+  listen(doc, 'touchend', event => {
+    if (press?.input === 'touch' && [...event.changedTouches].some(touch => touch.identifier === press.id)) endPress()
+  }, { capture: true, passive: true })
+  listen(doc, 'touchcancel', () => {
+    endPress()
+    if (tooltipSource !== 'touch') hide()
+  }, { passive: true })
+  listen(doc, 'contextmenu', event => {
+    const button = action(event)
+    if (!button) return
+    event.preventDefault()
+    // Some mobile browsers recognize long press before our timer fires.
+    if (press?.button === button) hold(press)
+  })
+  const closeAction = button => {
+    keyboard = false
+    hovered = focused = null
+    dismissing = true
+    try {
+      // Use the host's dismissal path rather than mutating aria-expanded or
+      // removing a React-owned portal. This also cancels its hover timers.
+      button.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+    } finally { dismissing = false }
+  }
   listen(doc, 'click', event => {
     const button = action(event)
     if (button && button === suppressClick) {
       event.preventDefault()
       event.stopImmediatePropagation()
       suppressClick = null
-    } else hide()
+    } else {
+      hide()
+      if (button && button.getAttribute('data-dmf-action') !== 'jobs' && button.getAttribute('aria-expanded') === 'true') {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        closeAction(button)
+      }
+    }
   }, { capture: true })
   listen(doc, 'keydown', event => {
+    if (dismissing) return
     keyboard = true
     suppressClick = null
     if (event.key === 'Escape') { cancelPress(); hide() }

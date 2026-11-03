@@ -2,7 +2,7 @@
 window.__ModuleLoader__.load({
   id: "dsh-mobile-fix",
   factory(require) {
-    const CSS = "/*\n * DeepSeek Harness mobile layout fixes.\n *\n * Layout rules are gated twice: html[data-dmf] is set by the client module only\n * in a browser layout (not the macOS or Windows desktop shells), and media\n * queries keep the desktop layout untouched above 767px. The settings row is\n * available at every browser width. Harness styles are CSS\n * modules whose class names look like `<hash>_<localName>`, so components are\n * matched by the `_<localName>` suffix; scripts/check-upstream.mjs verifies that\n * each local name used here still exists in a Harness checkout.\n */\n\n/* Plugin-owned chrome exists on every page but only shows in the mobile layout. */\n[data-dmf-menu],\n[data-dmf-backdrop],\n[data-dmf-action-icon],\n[data-dmf-action-count],\n[data-dmf-tooltip] {\n  display: none;\n}\n\nhtml[data-dmf] [data-dmf-setting] {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 24px;\n  padding: 16px 0;\n  border-bottom: 0.5px solid var(--dsw-alias-border-l2);\n}\n\nhtml[data-dmf] [data-dmf-setting] > :first-child {\n  min-width: 0;\n}\n\nhtml[data-dmf] [data-dmf-setting-title] {\n  font-size: 14px;\n  line-height: 20px;\n}\n\nhtml[data-dmf] [data-dmf-setting-description] {\n  margin-top: 4px;\n  color: var(--dsw-alias-label-secondary);\n  font-size: 12px;\n  line-height: 18px;\n}\n\n@media (max-width: 767px) {\n  /* Keep the document out of the scroll chain. Mobile keyboards can pan a\n     100%-height page and leave a scrollable blank band below the app. The\n     runtime follows the visual viewport; conversation and panel scrollports\n     continue to own their own scrolling. */\n  html[data-dmf] {\n    overflow: hidden;\n  }\n\n  html[data-dmf] body {\n    position: fixed;\n    inset: 0;\n    width: 100%;\n    height: 100%;\n    height: var(--dmf-viewport-height, 100dvh);\n    overflow: hidden;\n  }\n\n  html[data-dmf] #root {\n    height: 100%;\n    min-height: 0;\n    overflow: hidden;\n  }\n\n  /* ── Left sidebar: an off-canvas drawer instead of a 56px rail ─────────────\n     AppFrame keeps a grid track for the sidebar (56px rail, or the expanded\n     width). The centre spans that track too, so it reaches the left edge, and\n     the sidebar column floats above it. */\n  html[data-dmf] [class*=\"_frame\"]:has(> [data-shell-bottom]) > [class*=\"_centerCol\"] {\n    grid-column: 1 / 3;\n    grid-row: 1;\n  }\n\n  html[data-dmf] [class*=\"_frame\"]:has(> [data-shell-bottom]) > [class*=\"_rightbarCol\"] {\n    grid-column: 3;\n    grid-row: 1;\n  }\n\n  html[data-dmf] [class*=\"_frame\"]:has(> [data-shell-bottom]) > [class*=\"_sidebarCol\"] {\n    position: fixed;\n    top: 0;\n    bottom: 0;\n    left: 0;\n    z-index: 900;\n    width: min(304px, 86vw);\n    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) env(safe-area-inset-left);\n    box-sizing: border-box;\n    border-right: none;\n    transform: translateX(-100%);\n    visibility: hidden;\n    transition: transform 220ms var(--ds-ease-in-out, ease), visibility 0s linear 220ms;\n  }\n\n  html[data-dmf] [class*=\"_frame\"]:has(> [data-shell-bottom]):not([data-sidebar-collapsed]) > [class*=\"_sidebarCol\"] {\n    transform: none;\n    visibility: visible;\n    box-shadow: var(--dsw-elevation-prominent);\n    transition: transform 220ms var(--ds-ease-in-out, ease);\n  }\n\n  /* The sidebar freezes an inline width for its crossfade; the drawer owns the width now. */\n  html[data-dmf] [class*=\"_frame\"]:has(> [data-shell-bottom]) > [class*=\"_sidebarCol\"] > * {\n    width: 100% !important;\n  }\n\n  /* No resize handle on a drawer. */\n  html[data-dmf] [class*=\"_frame\"]:has(> [data-shell-bottom]) > [class*=\"_handle\"] {\n    display: none;\n  }\n\n  /* The conversation header already pads its title by the frame's published\n     leading clearance (the macOS traffic-light band); publish the menu button's\n     band the same way. */\n  html[data-dmf] [class*=\"_frame\"][data-sidebar-collapsed]:has(> [data-shell-bottom]) {\n    --dsh-frame-leading-clearance: 58px;\n  }\n\n  /* Session actions (Team, subagents, background jobs) cannot share one\n     non-shrinking row with the title and trailing controls on a phone.\n     Flatten only the title cluster, keeping navigation on the first row and\n     allowing every action to wrap below it without overlapping hit areas. */\n  html[data-dmf] [class*=\"_titleRow\"]:has(> [class*=\"_titleCluster\"] > [class*=\"_headerActions\"]) {\n    display: grid;\n    grid-template-columns: minmax(0, 1fr) auto auto;\n    grid-template-rows: minmax(35px, auto) auto;\n    gap: 6px 8px;\n    padding-inline-start: 0;\n  }\n\n  html[data-dmf] [class*=\"_titleRow\"] > [class*=\"_titleCluster\"]:has(> [class*=\"_headerActions\"]) {\n    display: contents;\n  }\n\n  html[data-dmf] [class*=\"_titleCluster\"]:has(> [class*=\"_headerActions\"]) > [class*=\"_crumbs\"] {\n    grid-column: 1;\n    grid-row: 1;\n    padding-inline-start: max(0px, calc(var(--dsh-frame-leading-clearance, 0px) - 20px));\n  }\n\n  html[data-dmf] [class*=\"_titleCluster\"] > [class*=\"_headerActions\"] {\n    grid-column: 1 / -1;\n    grid-row: 2;\n    flex-wrap: wrap;\n    min-width: 0;\n    gap: 4px 8px;\n  }\n\n  html[data-dmf] [class*=\"_titleRow\"]:has(> [class*=\"_titleCluster\"] > [class*=\"_headerActions\"]) > [class*=\"_headerUtilities\"] {\n    grid-column: 2;\n    grid-row: 1;\n    margin-left: 0;\n  }\n\n  html[data-dmf] [class*=\"_titleRow\"]:has(> [class*=\"_titleCluster\"] > [class*=\"_headerActions\"]) > [class*=\"_headerCorner\"] {\n    grid-column: 3;\n    grid-row: 1;\n  }\n\n  /* Default compact mode keeps all three task controls beside the title.\n     The text mode above remains a wrapping second row, preserving hit areas. */\n  html[data-dmf][data-dmf-icons] [class*=\"_titleRow\"]:has(> [class*=\"_titleCluster\"] > [class*=\"_headerActions\"]) {\n    display: flex;\n    flex-wrap: wrap;\n    min-height: 40px;\n    gap: 4px;\n  }\n\n  html[data-dmf][data-dmf-icons] [class*=\"_titleCluster\"]:has(> [class*=\"_headerActions\"]) > [class*=\"_crumbs\"] {\n    flex: 1 1 38px;\n    min-width: 38px;\n    box-sizing: border-box;\n  }\n\n  html[data-dmf][data-dmf-icons] [class*=\"_titleCluster\"] > [class*=\"_headerActions\"] {\n    max-width: 132px;\n    gap: 2px;\n  }\n\n  html[data-dmf][data-dmf-icons] button[data-dmf-action] {\n    position: relative;\n    display: inline-flex;\n    flex: none;\n    align-items: center;\n    justify-content: center;\n    box-sizing: border-box;\n    width: 40px;\n    height: 40px;\n    min-height: 40px;\n    padding: 0;\n    -webkit-touch-callout: none;\n    user-select: none;\n  }\n\n  html[data-dmf][data-dmf-icons] button[data-dmf-action] > :not([data-dmf-action-icon]):not([data-dmf-action-count]):not([class*=\"_activitySlot\"]):not([class*=\"_triggerDot\"]) {\n    display: none;\n  }\n\n  html[data-dmf][data-dmf-icons] [data-dmf-action-icon] {\n    display: inline-flex;\n  }\n\n  html[data-dmf][data-dmf-icons] [data-dmf-action-count]:not(:empty) {\n    position: absolute;\n    top: 0;\n    right: 0;\n    display: block;\n    max-width: 28px;\n    padding: 0 2px;\n    overflow: hidden;\n    border-radius: var(--dsw-radius-xs, 4px);\n    background: var(--dsw-alias-bg-base, #fff);\n    color: var(--dsw-alias-label-secondary);\n    font-size: 10px;\n    line-height: 13px;\n    white-space: nowrap;\n    text-overflow: ellipsis;\n  }\n\n  html[data-dmf][data-dmf-icons] button[data-dmf-action] > :is([class*=\"_activitySlot\"], [class*=\"_triggerDot\"]) {\n    position: absolute;\n    top: 4px;\n    left: 2px;\n  }\n\n  html[data-dmf] [data-dmf-tooltip]:not([hidden]) {\n    position: fixed;\n    z-index: 1100;\n    display: block;\n    box-sizing: border-box;\n    width: max-content;\n    max-width: min(280px, calc(100vw - 16px));\n    padding: 5px 9px;\n    border-radius: var(--dsw-radius-sm, 8px);\n    background: var(--dsw-alias-tooltip-bg, #30343b);\n    color: var(--dsw-static-neutral-bluish-00, #fff);\n    font-size: 13px;\n    line-height: 20px;\n    overflow-wrap: anywhere;\n    pointer-events: none;\n  }\n\n  /* Full-page panels (plugins, automation, …) start their title at the top-left\n     corner; move it below the menu button. */\n  html[data-dmf][data-dmf-panel] [class*=\"_frame\"][data-sidebar-collapsed]:has(> [data-shell-bottom]) > [class*=\"_centerCol\"] {\n    padding-top: 24px;\n    box-sizing: border-box;\n  }\n\n  html[data-dmf] [class*=\"_frame\"]:has(> [data-shell-bottom]) {\n    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);\n    box-sizing: border-box;\n  }\n\n  /* ── Plugin-owned chrome: menu button and drawer backdrop ─────────────── */\n  html[data-dmf] [data-dmf-menu] {\n    position: fixed;\n    top: calc(env(safe-area-inset-top) + 5px);\n    left: calc(env(safe-area-inset-left) + 8px);\n    z-index: 35;\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    width: 40px;\n    height: 40px;\n    padding: 0;\n    border: none;\n    border-radius: var(--dsw-radius-md, 12px);\n    background: transparent;\n    color: var(--dsw-alias-label-secondary, #61666b);\n    cursor: pointer;\n    -webkit-tap-highlight-color: transparent;\n  }\n\n  html[data-dmf] [data-dmf-menu]:active {\n    background: var(--dsw-alias-interactive-bg-active, #2631481a);\n  }\n\n  html[data-dmf][data-dmf-drawer] [data-dmf-menu],\n  html[data-dmf]:has([data-rightbar-fullscreen]) [data-dmf-menu] {\n    display: none;\n  }\n\n  html[data-dmf] [data-dmf-backdrop] {\n    position: fixed;\n    inset: 0;\n    z-index: 899;\n    display: block;\n    background: var(--dsw-alias-bg-mask-1, #0000003d);\n    opacity: 0;\n    pointer-events: none;\n    transition: opacity 220ms var(--ds-ease-in-out, ease);\n  }\n\n  html[data-dmf][data-dmf-drawer] [data-dmf-backdrop] {\n    opacity: 1;\n    pointer-events: auto;\n  }\n\n  /* ── Settings: a full-screen sheet with a scrolling tab strip ─────────────\n     The 0.2.x panel is an 800px card with a 188px navigation rail beside the\n     options, which leaves ~120px for every row on a phone. The panel becomes a\n     grid; nav and content dissolve (display: contents) so their children can\n     take the title / close / tabs / options areas. */\n  html[data-dmf] [class*=\"_overlay\"]:has(> [class*=\"_panel\"] > [class*=\"_nav\"] > [class*=\"_navList\"]) {\n    align-items: stretch;\n    justify-content: stretch;\n  }\n\n  html[data-dmf] [class*=\"_panel\"]:has(> [class*=\"_nav\"] > [class*=\"_navList\"]):has(> [class*=\"_content\"] > [class*=\"_options\"]) {\n    display: grid;\n    grid-template-columns: minmax(0, 1fr) auto;\n    grid-template-rows: auto auto minmax(0, 1fr);\n    grid-template-areas:\n      'title header'\n      'nav nav'\n      'options options';\n    width: 100%;\n    max-width: none;\n    height: 100%;\n    padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);\n    box-sizing: border-box;\n    border-radius: 0;\n    box-shadow: none;\n  }\n\n  html[data-dmf] [class*=\"_panel\"] > [class*=\"_nav\"]:has(> [class*=\"_navList\"]),\n  html[data-dmf] [class*=\"_panel\"] > [class*=\"_content\"]:has(> [class*=\"_options\"]) {\n    display: contents;\n  }\n\n  html[data-dmf] [class*=\"_nav\"] > [class*=\"_navTitle\"] {\n    grid-area: title;\n    align-self: center;\n    padding: 12px 0 0 20px;\n    font-size: 18px;\n    line-height: 26px;\n    overflow: hidden;\n    white-space: nowrap;\n    text-overflow: ellipsis;\n  }\n\n  html[data-dmf] [class*=\"_content\"] > [class*=\"_header\"]:has(+ [class*=\"_options\"]) {\n    grid-area: header;\n    height: auto;\n    padding: 12px 10px 0 8px;\n  }\n\n  html[data-dmf] [class*=\"_content\"] > [class*=\"_header\"]:has(+ [class*=\"_options\"]) [class*=\"_close\"] {\n    width: 40px;\n    height: 40px;\n  }\n\n  html[data-dmf] [class*=\"_nav\"] > [class*=\"_navList\"] {\n    grid-area: nav;\n    flex-direction: row;\n    gap: 6px;\n    padding: 10px 16px 12px;\n    overflow-x: auto;\n    overflow-y: hidden;\n    overscroll-behavior-x: contain;\n    scrollbar-width: none;\n    border-bottom: 0.5px solid var(--dsw-alias-border-l2, #0000001a);\n  }\n\n  html[data-dmf] [class*=\"_nav\"] > [class*=\"_navList\"]::-webkit-scrollbar {\n    display: none;\n  }\n\n  html[data-dmf] [class*=\"_navList\"] > [class*=\"_navCell\"] {\n    flex: none;\n    height: 36px;\n    padding: 0 14px 0 12px;\n    border-radius: 18px;\n    white-space: nowrap;\n  }\n\n  html[data-dmf] [class*=\"_navCell\"] > [class*=\"_navLabel\"] {\n    flex: none;\n    overflow: visible;\n  }\n\n  html[data-dmf] [class*=\"_content\"] > [class*=\"_options\"] {\n    grid-area: options;\n    min-width: 0;\n    padding: 4px 16px calc(24px + env(safe-area-inset-bottom));\n    overscroll-behavior-y: contain;\n  }\n\n  /* Setting rows (title + description beside a control): the text column keeps\n     a readable width and the control wraps under it instead of squeezing it to\n     a letter per line. */\n  html[data-dmf] [class*=\"_options\"] [class*=\"_row\"]:has(> [class*=\"_rowText\"]) {\n    flex-wrap: wrap;\n    row-gap: 10px;\n  }\n\n  html[data-dmf] [class*=\"_options\"] [class*=\"_row\"] > [class*=\"_rowText\"] {\n    flex: 1 1 180px;\n    padding-right: 0;\n  }\n\n  html[data-dmf] [class*=\"_options\"] [class*=\"_row\"]:has(> [class*=\"_rowText\"]) > :not([class*=\"_rowText\"]) {\n    max-width: 100%;\n  }\n\n  html[data-dmf] [class*=\"_options\"] [class*=\"_selector\"] {\n    max-width: 100%;\n    white-space: nowrap;\n  }\n\n  /* Light / dark / system: one row of three instead of three full-width cards. */\n  html[data-dmf] [class*=\"_options\"] [class*=\"_cubeRow\"] {\n    flex-wrap: nowrap;\n  }\n\n  html[data-dmf] [class*=\"_cubeRow\"] > [class*=\"_themeCube\"] {\n    flex: 1 1 0;\n    min-width: 0;\n    padding: 14px 4px;\n  }\n}\n\n/* ── Touch: hover-only affordances and focus zoom ─────────────────────────── */\n@media (hover: none) and (pointer: coarse) {\n  /* Session and workspace row actions (archive, pin, menu) only appear on\n     hover. Keep them on the selected session and on workspace rows. */\n  html[data-dmf] [class*=\"_sessionRow\"][class*=\"_selected\"] [class*=\"_rowActions\"],\n  html[data-dmf] [class*=\"_projectRow\"] [class*=\"_rowActions\"] {\n    display: inline-flex;\n  }\n\n  html[data-dmf] [class*=\"_sessionRow\"][class*=\"_selected\"] [class*=\"_time\"],\n  html[data-dmf] [class*=\"_sessionRow\"][class*=\"_selected\"] [class*=\"_pinIndicator\"] {\n    display: none;\n  }\n\n  /* 16px glyph buttons get a 32px hit area without moving the glyph. */\n  html[data-dmf] [class*=\"_rowActions\"] > [class*=\"_iconButton\"] {\n    width: 32px;\n    height: 32px;\n    margin: -8px;\n  }\n\n  html[data-dmf] [class*=\"_rowActions\"] {\n    gap: 8px;\n  }\n}\n\n@media (max-width: 767px) and (pointer: coarse) {\n  /* iOS zooms the page when a focused field's text is under 16px. */\n  html[data-dmf] [contenteditable='true'],\n  html[data-dmf] [contenteditable='plaintext-only'],\n  html[data-dmf] textarea,\n  html[data-dmf] input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']) {\n    font-size: 16px !important;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  html[data-dmf] [class*=\"_frame\"]:has(> [data-shell-bottom]) > [class*=\"_sidebarCol\"],\n  html[data-dmf] [data-dmf-backdrop] {\n    transition: none !important;\n  }\n}\n";
+    const CSS = "/*\n * DeepSeek Harness mobile layout fixes.\n *\n * Layout rules are gated twice: html[data-dmf] is set by the client module only\n * in a browser layout (not the macOS or Windows desktop shells), and media\n * queries keep the desktop layout untouched above 767px. The settings row is\n * available at every browser width. Harness styles are CSS\n * modules whose class names look like `<hash>_<localName>`, so components are\n * matched by the `_<localName>` suffix; scripts/check-upstream.mjs verifies that\n * each local name used here still exists in a Harness checkout.\n */\n\n/* Plugin-owned chrome exists on every page but only shows in the mobile layout. */\n[data-dmf-menu],\n[data-dmf-backdrop],\n[data-dmf-action-icon],\n[data-dmf-action-count],\n[data-dmf-tooltip] {\n  display: none;\n}\n\nhtml[data-dmf] [data-dmf-setting] {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 24px;\n  padding: 16px 0;\n  border-bottom: 0.5px solid var(--dsw-alias-border-l2);\n}\n\nhtml[data-dmf] [data-dmf-setting] > :first-child {\n  min-width: 0;\n}\n\nhtml[data-dmf] [data-dmf-setting-title] {\n  font-size: 14px;\n  line-height: 20px;\n}\n\nhtml[data-dmf] [data-dmf-setting-description] {\n  margin-top: 4px;\n  color: var(--dsw-alias-label-secondary);\n  font-size: 12px;\n  line-height: 18px;\n}\n\n@media (max-width: 767px) {\n  /* Keep the document out of the scroll chain. Mobile keyboards can pan a\n     100%-height page and leave a scrollable blank band below the app. The\n     runtime follows the visual viewport; conversation and panel scrollports\n     continue to own their own scrolling. */\n  html[data-dmf] {\n    overflow: hidden;\n  }\n\n  html[data-dmf] body {\n    position: fixed;\n    inset: 0;\n    width: 100%;\n    height: 100%;\n    height: var(--dmf-viewport-height, 100dvh);\n    overflow: hidden;\n  }\n\n  html[data-dmf] #root {\n    height: 100%;\n    min-height: 0;\n    overflow: hidden;\n  }\n\n  /* ── Left sidebar: an off-canvas drawer instead of a 56px rail ─────────────\n     AppFrame keeps a grid track for the sidebar (56px rail, or the expanded\n     width). The centre spans that track too, so it reaches the left edge, and\n     the sidebar column floats above it. */\n  html[data-dmf] [class*=\"_frame\"]:has(> [data-shell-bottom]) > [class*=\"_centerCol\"] {\n    grid-column: 1 / 3;\n    grid-row: 1;\n  }\n\n  html[data-dmf] [class*=\"_frame\"]:has(> [data-shell-bottom]) > [class*=\"_rightbarCol\"] {\n    grid-column: 3;\n    grid-row: 1;\n  }\n\n  html[data-dmf] [class*=\"_frame\"]:has(> [data-shell-bottom]) > [class*=\"_sidebarCol\"] {\n    position: fixed;\n    top: 0;\n    bottom: 0;\n    left: 0;\n    z-index: 900;\n    width: min(304px, 86vw);\n    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) env(safe-area-inset-left);\n    box-sizing: border-box;\n    border-right: none;\n    transform: translateX(-100%);\n    visibility: hidden;\n    transition: transform 220ms var(--ds-ease-in-out, ease), visibility 0s linear 220ms;\n  }\n\n  html[data-dmf] [class*=\"_frame\"]:has(> [data-shell-bottom]):not([data-sidebar-collapsed]) > [class*=\"_sidebarCol\"] {\n    transform: none;\n    visibility: visible;\n    box-shadow: var(--dsw-elevation-prominent);\n    transition: transform 220ms var(--ds-ease-in-out, ease);\n  }\n\n  /* The sidebar freezes an inline width for its crossfade; the drawer owns the width now. */\n  html[data-dmf] [class*=\"_frame\"]:has(> [data-shell-bottom]) > [class*=\"_sidebarCol\"] > * {\n    width: 100% !important;\n  }\n\n  /* No resize handle on a drawer. */\n  html[data-dmf] [class*=\"_frame\"]:has(> [data-shell-bottom]) > [class*=\"_handle\"] {\n    display: none;\n  }\n\n  /* The conversation header already pads its title by the frame's published\n     leading clearance (the macOS traffic-light band); publish the menu button's\n     band the same way. */\n  html[data-dmf] [class*=\"_frame\"][data-sidebar-collapsed]:has(> [data-shell-bottom]) {\n    --dsh-frame-leading-clearance: 58px;\n  }\n\n  /* Session actions (Team, subagents, background jobs) cannot share one\n     non-shrinking row with the title and trailing controls on a phone.\n     Flatten only the title cluster, keeping navigation on the first row and\n     allowing every action to wrap below it without overlapping hit areas. */\n  html[data-dmf] [class*=\"_titleRow\"]:has(> [class*=\"_titleCluster\"] > [class*=\"_headerActions\"]) {\n    display: grid;\n    grid-template-columns: minmax(0, 1fr) auto auto;\n    grid-template-rows: minmax(35px, auto) auto;\n    gap: 6px 8px;\n    padding-inline-start: 0;\n  }\n\n  html[data-dmf] [class*=\"_titleRow\"] > [class*=\"_titleCluster\"]:has(> [class*=\"_headerActions\"]) {\n    display: contents;\n  }\n\n  html[data-dmf] [class*=\"_titleCluster\"]:has(> [class*=\"_headerActions\"]) > [class*=\"_crumbs\"] {\n    grid-column: 1;\n    grid-row: 1;\n    padding-inline-start: max(0px, calc(var(--dsh-frame-leading-clearance, 0px) - 20px));\n  }\n\n  html[data-dmf] [class*=\"_titleCluster\"] > [class*=\"_headerActions\"] {\n    grid-column: 1 / -1;\n    grid-row: 2;\n    flex-wrap: wrap;\n    min-width: 0;\n    gap: 4px 8px;\n  }\n\n  html[data-dmf] [class*=\"_titleRow\"]:has(> [class*=\"_titleCluster\"] > [class*=\"_headerActions\"]) > [class*=\"_headerUtilities\"] {\n    grid-column: 2;\n    grid-row: 1;\n    margin-left: 0;\n  }\n\n  html[data-dmf] [class*=\"_titleRow\"]:has(> [class*=\"_titleCluster\"] > [class*=\"_headerActions\"]) > [class*=\"_headerCorner\"] {\n    grid-column: 3;\n    grid-row: 1;\n  }\n\n  /* Default compact mode keeps all three task controls beside the title.\n     The text mode above remains a wrapping second row, preserving hit areas. */\n  html[data-dmf][data-dmf-icons] [class*=\"_titleRow\"]:has(> [class*=\"_titleCluster\"] > [class*=\"_headerActions\"]) {\n    display: flex;\n    flex-wrap: nowrap;\n    min-height: 40px;\n    gap: 4px;\n  }\n\n  html[data-dmf][data-dmf-icons] [class*=\"_titleCluster\"]:has(> [class*=\"_headerActions\"]) > [class*=\"_crumbs\"] {\n    flex: 1 1 38px;\n    min-width: 38px;\n    box-sizing: border-box;\n  }\n\n  html[data-dmf][data-dmf-icons] [class*=\"_titleCluster\"] > [class*=\"_headerActions\"] {\n    flex: 0 1 auto;\n    flex-wrap: nowrap;\n    min-width: 40px;\n    overflow-x: auto;\n    overflow-y: hidden;\n    scrollbar-width: none;\n    overscroll-behavior-x: contain;\n    gap: 2px;\n  }\n\n  html[data-dmf][data-dmf-icons] [class*=\"_titleCluster\"] > [class*=\"_headerActions\"]::-webkit-scrollbar {\n    display: none;\n  }\n\n  html[data-dmf][data-dmf-icons] [class*=\"_headerActions\"] :is(div, span):has(> button[data-dmf-action]) {\n    /* Some host action wrappers allow shrinking to zero. Keep their 40px\n       buttons in the scroll strip rather than overflowing over a neighbour. */\n    flex-shrink: 0;\n  }\n\n  html[data-dmf][data-dmf-icons] button[data-dmf-action] {\n    position: relative;\n    display: inline-flex;\n    flex: none;\n    align-items: center;\n    justify-content: center;\n    box-sizing: border-box;\n    width: 40px;\n    height: 40px;\n    min-height: 40px;\n    padding: 0;\n    -webkit-touch-callout: none;\n    user-select: none;\n  }\n\n  html[data-dmf][data-dmf-icons] button[data-dmf-action] > :not([data-dmf-action-icon]):not([data-dmf-action-count]):not([class*=\"_activitySlot\"]):not([class*=\"_triggerDot\"]) {\n    display: none;\n  }\n\n  html[data-dmf][data-dmf-icons] [data-dmf-action-icon] {\n    display: inline-flex;\n  }\n\n  html[data-dmf][data-dmf-icons] [data-dmf-action-count]:not(:empty) {\n    position: absolute;\n    top: 0;\n    right: 0;\n    display: block;\n    max-width: 28px;\n    padding: 0 2px;\n    overflow: hidden;\n    border-radius: var(--dsw-radius-xs, 4px);\n    background: var(--dsw-alias-bg-base, #fff);\n    color: var(--dsw-alias-label-secondary);\n    font-size: 10px;\n    line-height: 13px;\n    white-space: nowrap;\n    text-overflow: ellipsis;\n  }\n\n  html[data-dmf][data-dmf-icons] button[data-dmf-action] > :is([class*=\"_activitySlot\"], [class*=\"_triggerDot\"]) {\n    position: absolute;\n    top: 4px;\n    left: 2px;\n  }\n\n  html[data-dmf] [data-dmf-tooltip]:not([hidden]) {\n    position: fixed;\n    z-index: 1100;\n    display: block;\n    box-sizing: border-box;\n    width: max-content;\n    max-width: min(280px, calc(100vw - 16px));\n    padding: 5px 9px;\n    border-radius: var(--dsw-radius-sm, 8px);\n    background: var(--dsw-alias-tooltip-bg, #30343b);\n    color: var(--dsw-static-neutral-bluish-00, #fff);\n    font-size: 13px;\n    line-height: 20px;\n    overflow-wrap: anywhere;\n    pointer-events: none;\n  }\n\n  /* Full-page panels (plugins, automation, …) start their title at the top-left\n     corner; move it below the menu button. */\n  html[data-dmf][data-dmf-panel] [class*=\"_frame\"][data-sidebar-collapsed]:has(> [data-shell-bottom]) > [class*=\"_centerCol\"] {\n    padding-top: 24px;\n    box-sizing: border-box;\n  }\n\n  html[data-dmf] [class*=\"_frame\"]:has(> [data-shell-bottom]) {\n    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);\n    box-sizing: border-box;\n  }\n\n  /* ── Plugin-owned chrome: menu button and drawer backdrop ─────────────── */\n  html[data-dmf] [data-dmf-menu] {\n    position: fixed;\n    top: calc(env(safe-area-inset-top) + 5px);\n    left: calc(env(safe-area-inset-left) + 8px);\n    z-index: 35;\n    display: inline-flex;\n    align-items: center;\n    justify-content: center;\n    width: 40px;\n    height: 40px;\n    padding: 0;\n    border: none;\n    border-radius: var(--dsw-radius-md, 12px);\n    background: transparent;\n    color: var(--dsw-alias-label-secondary, #61666b);\n    cursor: pointer;\n    -webkit-tap-highlight-color: transparent;\n  }\n\n  html[data-dmf] [data-dmf-menu]:active {\n    background: var(--dsw-alias-interactive-bg-active, #2631481a);\n  }\n\n  html[data-dmf][data-dmf-drawer] [data-dmf-menu],\n  html[data-dmf]:has([data-rightbar-fullscreen]) [data-dmf-menu] {\n    display: none;\n  }\n\n  html[data-dmf] [data-dmf-backdrop] {\n    position: fixed;\n    inset: 0;\n    z-index: 899;\n    display: block;\n    background: var(--dsw-alias-bg-mask-1, #0000003d);\n    opacity: 0;\n    pointer-events: none;\n    transition: opacity 220ms var(--ds-ease-in-out, ease);\n  }\n\n  html[data-dmf][data-dmf-drawer] [data-dmf-backdrop] {\n    opacity: 1;\n    pointer-events: auto;\n  }\n\n  /* ── Settings: a full-screen sheet with a scrolling tab strip ─────────────\n     The 0.2.x panel is an 800px card with a 188px navigation rail beside the\n     options, which leaves ~120px for every row on a phone. The panel becomes a\n     grid; nav and content dissolve (display: contents) so their children can\n     take the title / close / tabs / options areas. */\n  html[data-dmf] [class*=\"_overlay\"]:has(> [class*=\"_panel\"] > [class*=\"_nav\"] > [class*=\"_navList\"]) {\n    align-items: stretch;\n    justify-content: stretch;\n  }\n\n  html[data-dmf] [class*=\"_panel\"]:has(> [class*=\"_nav\"] > [class*=\"_navList\"]):has(> [class*=\"_content\"] > [class*=\"_options\"]) {\n    display: grid;\n    grid-template-columns: minmax(0, 1fr) auto;\n    grid-template-rows: auto auto minmax(0, 1fr);\n    grid-template-areas:\n      'title header'\n      'nav nav'\n      'options options';\n    width: 100%;\n    max-width: none;\n    height: 100%;\n    padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);\n    box-sizing: border-box;\n    border-radius: 0;\n    box-shadow: none;\n  }\n\n  html[data-dmf] [class*=\"_panel\"] > [class*=\"_nav\"]:has(> [class*=\"_navList\"]),\n  html[data-dmf] [class*=\"_panel\"] > [class*=\"_content\"]:has(> [class*=\"_options\"]) {\n    display: contents;\n  }\n\n  html[data-dmf] [class*=\"_nav\"] > [class*=\"_navTitle\"] {\n    grid-area: title;\n    align-self: center;\n    padding: 12px 0 0 20px;\n    font-size: 18px;\n    line-height: 26px;\n    overflow: hidden;\n    white-space: nowrap;\n    text-overflow: ellipsis;\n  }\n\n  html[data-dmf] [class*=\"_content\"] > [class*=\"_header\"]:has(+ [class*=\"_options\"]) {\n    grid-area: header;\n    height: auto;\n    padding: 12px 10px 0 8px;\n  }\n\n  html[data-dmf] [class*=\"_content\"] > [class*=\"_header\"]:has(+ [class*=\"_options\"]) [class*=\"_close\"] {\n    width: 40px;\n    height: 40px;\n  }\n\n  html[data-dmf] [class*=\"_nav\"] > [class*=\"_navList\"] {\n    grid-area: nav;\n    flex-direction: row;\n    gap: 6px;\n    padding: 10px 16px 12px;\n    overflow-x: auto;\n    overflow-y: hidden;\n    overscroll-behavior-x: contain;\n    scrollbar-width: none;\n    border-bottom: 0.5px solid var(--dsw-alias-border-l2, #0000001a);\n  }\n\n  html[data-dmf] [class*=\"_nav\"] > [class*=\"_navList\"]::-webkit-scrollbar {\n    display: none;\n  }\n\n  html[data-dmf] [class*=\"_navList\"] > [class*=\"_navCell\"] {\n    flex: none;\n    height: 36px;\n    padding: 0 14px 0 12px;\n    border-radius: 18px;\n    white-space: nowrap;\n  }\n\n  html[data-dmf] [class*=\"_navCell\"] > [class*=\"_navLabel\"] {\n    flex: none;\n    overflow: visible;\n  }\n\n  html[data-dmf] [class*=\"_content\"] > [class*=\"_options\"] {\n    grid-area: options;\n    min-width: 0;\n    padding: 4px 16px calc(24px + env(safe-area-inset-bottom));\n    overscroll-behavior-y: contain;\n  }\n\n  /* Setting rows (title + description beside a control): the text column keeps\n     a readable width and the control wraps under it instead of squeezing it to\n     a letter per line. */\n  html[data-dmf] [class*=\"_options\"] [class*=\"_row\"]:has(> [class*=\"_rowText\"]) {\n    flex-wrap: wrap;\n    row-gap: 10px;\n  }\n\n  html[data-dmf] [class*=\"_options\"] [class*=\"_row\"] > [class*=\"_rowText\"] {\n    flex: 1 1 180px;\n    padding-right: 0;\n  }\n\n  html[data-dmf] [class*=\"_options\"] [class*=\"_row\"]:has(> [class*=\"_rowText\"]) > :not([class*=\"_rowText\"]) {\n    max-width: 100%;\n  }\n\n  html[data-dmf] [class*=\"_options\"] [class*=\"_selector\"] {\n    max-width: 100%;\n    white-space: nowrap;\n  }\n\n  /* Light / dark / system: one row of three instead of three full-width cards. */\n  html[data-dmf] [class*=\"_options\"] [class*=\"_cubeRow\"] {\n    flex-wrap: nowrap;\n  }\n\n  html[data-dmf] [class*=\"_cubeRow\"] > [class*=\"_themeCube\"] {\n    flex: 1 1 0;\n    min-width: 0;\n    padding: 14px 4px;\n  }\n}\n\n/* ── Touch: hover-only affordances and focus zoom ─────────────────────────── */\n@media (hover: none) and (pointer: coarse) {\n  /* Session and workspace row actions (archive, pin, menu) only appear on\n     hover. Keep them on the selected session and on workspace rows. */\n  html[data-dmf] [class*=\"_sessionRow\"][class*=\"_selected\"] [class*=\"_rowActions\"],\n  html[data-dmf] [class*=\"_projectRow\"] [class*=\"_rowActions\"] {\n    display: inline-flex;\n  }\n\n  html[data-dmf] [class*=\"_sessionRow\"][class*=\"_selected\"] [class*=\"_time\"],\n  html[data-dmf] [class*=\"_sessionRow\"][class*=\"_selected\"] [class*=\"_pinIndicator\"] {\n    display: none;\n  }\n\n  /* 16px glyph buttons get a 32px hit area without moving the glyph. */\n  html[data-dmf] [class*=\"_rowActions\"] > [class*=\"_iconButton\"] {\n    width: 32px;\n    height: 32px;\n    margin: -8px;\n  }\n\n  html[data-dmf] [class*=\"_rowActions\"] {\n    gap: 8px;\n  }\n}\n\n@media (max-width: 767px) and (pointer: coarse) {\n  /* iOS zooms the page when a focused field's text is under 16px. */\n  html[data-dmf] [contenteditable='true'],\n  html[data-dmf] [contenteditable='plaintext-only'],\n  html[data-dmf] textarea,\n  html[data-dmf] input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']) {\n    font-size: 16px !important;\n  }\n}\n\n@media (prefers-reduced-motion: reduce) {\n  html[data-dmf] [class*=\"_frame\"]:has(> [data-shell-bottom]) > [class*=\"_sidebarCol\"],\n  html[data-dmf] [data-dmf-backdrop] {\n    transition: none !important;\n  }\n}\n";
     // This module is inlined into the client factory; React and Switch come from
     // the Harness platform table, sharing the host's React instance.
     const SETTINGS_NAMESPACE = 'mobileFix'
@@ -105,6 +105,8 @@ window.__ModuleLoader__.load({
       let suppressClick = null
       let hoverTimer = null
       let tooltipAnchor = null
+      let tooltipSource = null
+      let dismissing = false
       const listen = (target, type, handler, options) => {
         target.addEventListener(type, handler, options)
         cleanups.push(() => target.removeEventListener(type, handler, options))
@@ -130,17 +132,20 @@ window.__ModuleLoader__.load({
         cancelHover()
         if (tooltipAnchor) describe(tooltipAnchor, false)
         tooltipAnchor = null
+        tooltipSource = null
         tooltip.hidden = true
       }
       const cancelPress = () => { if (press) win.clearTimeout(press.timer); press = null }
-      const show = button => {
+      const show = (button, source = 'hover') => {
         const entry = entries.get(button)
-        if (!active() || !entry || !button.isConnected || button.getAttribute('aria-expanded') === 'true') return
+        if (!active() || !entry || !button.isConnected) return
+        if (source !== 'touch' && button.getAttribute('aria-expanded') === 'true') return
         if (tooltipAnchor !== button) hide()
         tooltip.textContent = entry.label
         if (!tooltip.isConnected) doc.body.append(tooltip)
         tooltip.hidden = false
         tooltipAnchor = button
+        tooltipSource = source
         describe(button, true)
         const rect = button.getBoundingClientRect()
         const box = tooltip.getBoundingClientRect()
@@ -202,8 +207,8 @@ window.__ModuleLoader__.load({
           const badge = Number(count.replaceAll(',', '')) > 99 ? '99+' : count
           if (entry.badge.textContent !== badge) entry.badge.textContent = badge
           if (tooltipAnchor === button) {
-            if (button.getAttribute('aria-expanded') === 'true') hide()
-            else if (tooltip.textContent !== entry.label) show(button)
+            if (tooltipSource !== 'touch' && button.getAttribute('aria-expanded') === 'true') hide()
+            else if (tooltip.textContent !== entry.label) show(button, tooltipSource)
           }
         }
       }
@@ -247,64 +252,143 @@ window.__ModuleLoader__.load({
         const button = event.target instanceof win.Element ? event.target.closest('button[data-dmf-action]') : null
         return button && !button.disabled && active() ? button : null
       }
-      listen(doc, 'pointerover', event => {
+      const hoverIn = event => {
         const button = action(event)
-        if (!button || event.pointerType === 'touch') return
+        if (!button) return
         // Host subagent hover opens a catalog. In compact mode hover explains the
         // icon; clicking still reaches the unchanged host handler and opens it.
         event.stopPropagation()
+        if (event.pointerType === 'touch' || press || tooltipSource === 'touch') return
         if (event.relatedTarget && button.contains(event.relatedTarget)) return
         hovered = button
         cancelHover()
-        hoverTimer = win.setTimeout(() => { show(button) }, 400)
-      }, { capture: true })
-      listen(doc, 'pointerout', event => {
+        hoverTimer = win.setTimeout(() => { show(button, 'hover') }, 400)
+      }
+      const hoverOut = event => {
         const button = action(event)
-        if (!button || (event.relatedTarget && button.contains(event.relatedTarget))) return
+        if (!button) {
+          // React can synthesize mouse-enter for the destination from a portal's
+          // mouse-out, before the destination's mouse-over reaches the document.
+          // Pointer-out still passes through so other native tooltips can leave.
+          const next = event.relatedTarget instanceof win.Element
+            ? event.relatedTarget.closest('button[data-dmf-action]') : null
+          if (event.type === 'mouseout' && next && active()) event.stopPropagation()
+          return
+        }
+        event.stopPropagation()
+        if (event.pointerType === 'touch' || press || tooltipSource === 'touch') return
+        if (event.relatedTarget && button.contains(event.relatedTarget)) return
         hovered = null
         if (focused !== button) hide()
-      }, { capture: true })
+      }
+      // Released Harness versions use React mouse enter; others use pointer enter.
+      // Suppress both so a compatibility mouse event cannot race the tooltip.
+      for (const type of ['pointerover', 'mouseover']) listen(doc, type, hoverIn, { capture: true })
+      for (const type of ['pointerout', 'mouseout']) listen(doc, type, hoverOut, { capture: true })
       listen(doc, 'focusin', event => {
         const button = action(event)
-        if (button && keyboard) { focused = button; show(button) }
+        if (button && keyboard && !dismissing) { focused = button; show(button, 'focus') }
       })
       listen(doc, 'focusout', event => {
         const button = action(event)
-        if (button) { focused = null; if (hovered !== button) hide() }
+        if (button) { focused = null; if (hovered !== button && tooltipSource !== 'touch') hide() }
       })
+      const hold = pending => {
+        if (press !== pending || pending.shown) return
+        win.clearTimeout(pending.timer)
+        pending.shown = true
+        suppressClick = pending.button
+        show(pending.button, 'touch')
+      }
+      const beginPress = (button, point, input, id) => {
+        cancelPress()
+        const pending = { button, x: point.clientX, y: point.clientY, input, id, shown: false, timer: null }
+        pending.timer = win.setTimeout(() => { hold(pending) }, 550)
+        press = pending
+      }
+      const endPress = () => {
+        if (press?.shown) suppressClick = press.button
+        cancelPress()
+      }
+      const movePress = point => {
+        if (press && Math.hypot(point.clientX - press.x, point.clientY - press.y) > 10) { cancelPress(); hide() }
+      }
       listen(doc, 'pointerdown', event => {
         keyboard = false
+        hovered = focused = null
         suppressClick = null
         hide()
         cancelPress()
         const button = action(event)
         if (!button || event.pointerType !== 'touch' || event.isPrimary === false) return
-        const pending = { button, x: event.clientX, y: event.clientY, shown: false, timer: null }
-        pending.timer = win.setTimeout(() => {
-          if (press !== pending) return
-          pending.shown = true
-          show(button)
-        }, 550)
-        press = pending
+        beginPress(button, event, 'pointer', event.pointerId)
       }, { capture: true, passive: true })
       listen(doc, 'pointermove', event => {
-        if (press && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 10) { cancelPress(); hide() }
+        if (press?.input === 'pointer' && press.id === event.pointerId) movePress(event)
       }, { passive: true })
       listen(doc, 'pointerup', () => {
-        if (press?.shown) suppressClick = press.button
-        cancelPress()
+        if (press?.input === 'pointer') endPress()
       }, { capture: true, passive: true })
-      listen(doc, 'pointercancel', () => { cancelPress(); hide() }, { passive: true })
-      listen(doc, 'contextmenu', event => { if (action(event)) event.preventDefault() })
+      listen(doc, 'pointercancel', () => {
+        // Touch streams can continue after the browser cancels pointer events for
+        // a native hold gesture. Let touchend/touchcancel own that stream.
+        if (press?.input === 'touch') return
+        endPress()
+        if (tooltipSource !== 'touch') hide()
+      }, { passive: true })
+      listen(doc, 'touchstart', event => {
+        const button = action(event)
+        if (event.touches.length !== 1) { cancelPress(); hide(); return }
+        if (!button) return
+        keyboard = false
+        beginPress(button, event.touches[0], 'touch', event.touches[0].identifier)
+      }, { capture: true, passive: true })
+      listen(doc, 'touchmove', event => {
+        if (press?.input !== 'touch') return
+        const point = [...event.touches].find(touch => touch.identifier === press.id)
+        if (point) movePress(point)
+      }, { capture: true, passive: true })
+      listen(doc, 'touchend', event => {
+        if (press?.input === 'touch' && [...event.changedTouches].some(touch => touch.identifier === press.id)) endPress()
+      }, { capture: true, passive: true })
+      listen(doc, 'touchcancel', () => {
+        endPress()
+        if (tooltipSource !== 'touch') hide()
+      }, { passive: true })
+      listen(doc, 'contextmenu', event => {
+        const button = action(event)
+        if (!button) return
+        event.preventDefault()
+        // Some mobile browsers recognize long press before our timer fires.
+        if (press?.button === button) hold(press)
+      })
+      const closeAction = button => {
+        keyboard = false
+        hovered = focused = null
+        dismissing = true
+        try {
+          // Use the host's dismissal path rather than mutating aria-expanded or
+          // removing a React-owned portal. This also cancels its hover timers.
+          button.dispatchEvent(new win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }))
+        } finally { dismissing = false }
+      }
       listen(doc, 'click', event => {
         const button = action(event)
         if (button && button === suppressClick) {
           event.preventDefault()
           event.stopImmediatePropagation()
           suppressClick = null
-        } else hide()
+        } else {
+          hide()
+          if (button && button.getAttribute('data-dmf-action') !== 'jobs' && button.getAttribute('aria-expanded') === 'true') {
+            event.preventDefault()
+            event.stopImmediatePropagation()
+            closeAction(button)
+          }
+        }
       }, { capture: true })
       listen(doc, 'keydown', event => {
+        if (dismissing) return
         keyboard = true
         suppressClick = null
         if (event.key === 'Escape') { cancelPress(); hide() }

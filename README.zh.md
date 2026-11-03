@@ -33,7 +33,7 @@ dsh plugin --profile <配置文件> add github:DegreeCode/dsh-mobile-fix
 dsh plugin --profile <配置文件> add ./dsh-mobile-fix
 
 # 从发布包安装（GitHub Releases 中的 .tgz）
-dsh plugin --profile <配置文件> add ./dsh-mobile-fix-1.1.0.tgz
+dsh plugin --profile <配置文件> add ./dsh-mobile-fix-1.1.1.tgz
 ```
 
 也可以在应用内通过 **设置 → 插件 → 安装** 进行安装。卸载命令为 `dsh plugin --profile <配置文件> remove dsh-mobile-fix`。卸载或停用后，插件添加的样式、按钮、属性和 viewport 设置都会被还原。
@@ -42,7 +42,7 @@ dsh plugin --profile <配置文件> add ./dsh-mobile-fix-1.1.0.tgz
 
 在**设置 → 常规 → 将顶部操作显示为图标**中切换。默认开启，以带有状态和数量徽标的图标显示智能体团队、子智能体和后台任务，触控区域为 40px。关闭后显示文字标签，空间不足时换行，避免按钮重叠。选择保存在应用的用户设置中。
 
-短按立即打开对应功能；长按仅显示说明功能和当前状态的提示。鼠标悬停和键盘聚焦也可查看提示。图标模式仅影响移动端宽度。
+短按立即打开对应功能，再次点按同一按钮即可关闭；长按仅显示说明功能和当前状态的提示。鼠标悬停和键盘聚焦也可查看提示。长按提示在松手后仍保留，点按外部、滚动或按 Esc 可关闭。图标栏不换行，仅在屏幕过窄时横向滚动。图标模式仅影响移动端宽度。
 
 ## 工作原理
 

@@ -166,7 +166,7 @@ html[data-dmf] [data-dmf-setting-description] {
      The text mode above remains a wrapping second row, preserving hit areas. */
   html[data-dmf][data-dmf-icons] [class*="_titleRow"]:has(> [class*="_titleCluster"] > [class*="_headerActions"]) {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     min-height: 40px;
     gap: 4px;
   }
@@ -178,8 +178,24 @@ html[data-dmf] [data-dmf-setting-description] {
   }
 
   html[data-dmf][data-dmf-icons] [class*="_titleCluster"] > [class*="_headerActions"] {
-    max-width: 132px;
+    flex: 0 1 auto;
+    flex-wrap: nowrap;
+    min-width: 40px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
     gap: 2px;
+  }
+
+  html[data-dmf][data-dmf-icons] [class*="_titleCluster"] > [class*="_headerActions"]::-webkit-scrollbar {
+    display: none;
+  }
+
+  html[data-dmf][data-dmf-icons] [class*="_headerActions"] :is(div, span):has(> button[data-dmf-action]) {
+    /* Some host action wrappers allow shrinking to zero. Keep their 40px
+       buttons in the scroll strip rather than overflowing over a neighbour. */
+    flex-shrink: 0;
   }
 
   html[data-dmf][data-dmf-icons] button[data-dmf-action] {
