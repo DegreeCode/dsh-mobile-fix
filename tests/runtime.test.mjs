@@ -24,12 +24,14 @@ const FRAME = `
   </div>`
 
 /** Load client.js into a fresh page and apply it through a minimal cordis-like context. */
-function setup({ mobile = true, platform, body = FRAME } = {}) {
+function setup({ mobile = true, platform, body = FRAME, viewport = { height: 844, scale: 1 } } = {}) {
   const dom = new JSDOM(`<!doctype html><html lang="ko"${platform ? ` data-platform="${platform}"` : ''}><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>${body}</body></html>`, { pretendToBeVisual: true, runScripts: 'outside-only' })
   const { window } = dom
   const mediaListeners = new Set()
   const media = { matches: mobile, addEventListener: (_, fn) => mediaListeners.add(fn), removeEventListener: (_, fn) => mediaListeners.delete(fn) }
   window.matchMedia = () => media
+  const visualViewport = viewport === null ? null : Object.assign(new window.EventTarget(), viewport)
+  Object.defineProperty(window, 'visualViewport', { value: visualViewport, configurable: true })
 
   const frame = () => window.document.querySelector('[data-shell-bottom]')?.parentElement
   let panel = null
@@ -53,7 +55,7 @@ function setup({ mobile = true, platform, body = FRAME } = {}) {
   const dispose = () => { for (const effect of effects) effect.dispose() }
   const flush = () => new Promise(resolve => window.setTimeout(resolve, 0))
   const html = window.document.documentElement
-  return { window, document: window.document, html, module, layout, selectPanel, dispose, flush, frame, media, mediaListeners, panelListeners }
+  return { window, document: window.document, html, module, layout, selectPanel, dispose, flush, frame, media, mediaListeners, panelListeners, visualViewport }
 }
 
 test('registers as dsh-mobile-fix and injects the layout service', () => {
@@ -159,9 +161,53 @@ test('edge swipe opens and a left swipe on the drawer closes', async () => {
 })
 
 test('desktop widths leave the sidebar alone', () => {
-  const { document, layout } = setup({ mobile: false })
+  const { document, layout, html } = setup({ mobile: false })
   document.querySelector('[data-dmf-menu]').click()
   assert.equal(layout.toggles, 0)
+  assert.equal(html.style.getPropertyValue('--dmf-viewport-height'), '')
+})
+
+test('app height follows the visible viewport when the keyboard opens and closes', () => {
+  const { window, html, visualViewport } = setup()
+  const height = () => html.style.getPropertyValue('--dmf-viewport-height')
+  assert.equal(height(), '844px')
+  visualViewport.height = 510
+  visualViewport.dispatchEvent(new window.Event('resize'))
+  assert.equal(height(), '510px')
+  visualViewport.height = 844
+  visualViewport.dispatchEvent(new window.Event('resize'))
+  assert.equal(height(), '844px')
+  visualViewport.height = 0 // Ignore transient invalid measurements.
+  visualViewport.dispatchEvent(new window.Event('resize'))
+  assert.equal(height(), '844px')
+})
+
+test('pinch zoom does not resize the app', () => {
+  const { window, html, visualViewport } = setup()
+  Object.assign(visualViewport, { height: 422, scale: 2 })
+  visualViewport.dispatchEvent(new window.Event('resize'))
+  window.dispatchEvent(new window.Event('resize'))
+  assert.equal(html.style.getPropertyValue('--dmf-viewport-height'), '844px')
+})
+
+test('window height is the fallback when VisualViewport is unavailable', () => {
+  const { window, html } = setup({ viewport: null })
+  window.innerHeight = 510
+  window.dispatchEvent(new window.Event('resize'))
+  assert.equal(html.style.getPropertyValue('--dmf-viewport-height'), '510px')
+})
+
+test('viewport height is released at desktop widths and reapplied on mobile', () => {
+  const { window, html, media, mediaListeners, visualViewport } = setup()
+  media.matches = false
+  for (const listener of mediaListeners) listener()
+  assert.equal(html.style.getPropertyValue('--dmf-viewport-height'), '')
+  visualViewport.height = 700
+  visualViewport.dispatchEvent(new window.Event('resize'))
+  assert.equal(html.style.getPropertyValue('--dmf-viewport-height'), '')
+  media.matches = true
+  for (const listener of mediaListeners) listener()
+  assert.equal(html.style.getPropertyValue('--dmf-viewport-height'), '700px')
 })
 
 test('macOS and Windows desktop shells are not touched', () => {
@@ -172,7 +218,7 @@ test('macOS and Windows desktop shells are not touched', () => {
 })
 
 test('extends the viewport meta and undoes everything on dispose', () => {
-  const { html, document, dispose, panelListeners } = setup()
+  const { window, html, document, dispose, panelListeners, mediaListeners, visualViewport } = setup()
   const meta = document.querySelector('meta[name="viewport"]')
   assert.equal(meta.content, 'width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content')
   dispose()
@@ -180,4 +226,10 @@ test('extends the viewport meta and undoes everything on dispose', () => {
   assert.equal(html.hasAttribute('data-dmf'), false)
   assert.equal(document.querySelector('[data-dmf-menu], [data-dmf-backdrop], style[data-dmf-style]'), null)
   assert.equal(panelListeners.size, 0)
+  assert.equal(mediaListeners.size, 0)
+  assert.equal(html.style.getPropertyValue('--dmf-viewport-height'), '')
+  visualViewport.height = 510
+  visualViewport.dispatchEvent(new window.Event('resize'))
+  window.dispatchEvent(new window.Event('resize'))
+  assert.equal(html.style.getPropertyValue('--dmf-viewport-height'), '')
 })

@@ -53,6 +53,30 @@ export function install({ layout, css, doc = document, win = window }) {
   }
 
   const media = win.matchMedia(MOBILE_QUERY)
+  // Safari does not honor interactive-widget=resizes-content. Follow its
+  // visible height as the keyboard/browser chrome opens and closes instead
+  // of leaving the fixed app at the larger layout viewport's height.
+  const heightProperty = '--dmf-viewport-height'
+  const originalHeight = html.style.getPropertyValue(heightProperty)
+  const originalPriority = html.style.getPropertyPriority(heightProperty)
+  const restoreHeight = () => {
+    if (originalHeight) html.style.setProperty(heightProperty, originalHeight, originalPriority)
+    else html.style.removeProperty(heightProperty)
+  }
+  const syncViewport = () => {
+    if (!media.matches) { restoreHeight(); return }
+    const viewport = win.visualViewport
+    // Pinch zoom changes the visual viewport without changing app geometry.
+    if (viewport && viewport.scale !== 1) return
+    const height = viewport?.height ?? win.innerHeight
+    if (height > 0) html.style.setProperty(heightProperty, `${height}px`)
+  }
+  listen(win, 'resize', syncViewport)
+  if (win.visualViewport) listen(win.visualViewport, 'resize', syncViewport)
+  listen(media, 'change', syncViewport)
+  cleanups.push(restoreHeight)
+  syncViewport()
+
   const frame = () => doc.querySelector('[data-shell-bottom]')?.parentElement ?? null
   const collapsed = () => frame()?.hasAttribute('data-sidebar-collapsed') ?? true
   const isOpen = () => media.matches && frame() !== null && !collapsed()

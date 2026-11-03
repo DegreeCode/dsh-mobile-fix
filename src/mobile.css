@@ -16,6 +16,29 @@
 }
 
 @media (max-width: 767px) {
+  /* Keep the document out of the scroll chain. Mobile keyboards can pan a
+     100%-height page and leave a scrollable blank band below the app. The
+     runtime follows the visual viewport; conversation and panel scrollports
+     continue to own their own scrolling. */
+  html[data-dmf] {
+    overflow: hidden;
+  }
+
+  html[data-dmf] body {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    height: var(--dmf-viewport-height, 100dvh);
+    overflow: hidden;
+  }
+
+  html[data-dmf] #root {
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
   /* ── Left sidebar: an off-canvas drawer instead of a 56px rail ─────────────
      AppFrame keeps a grid track for the sidebar (56px rail, or the expanded
      width). The centre spans that track too, so it reaches the left edge, and
@@ -67,6 +90,47 @@
      band the same way. */
   html[data-dmf] [class*="_frame"][data-sidebar-collapsed]:has(> [data-shell-bottom]) {
     --dsh-frame-leading-clearance: 58px;
+  }
+
+  /* Session actions (Team, subagents, background jobs) cannot share one
+     non-shrinking row with the title and trailing controls on a phone.
+     Flatten only the title cluster, keeping navigation on the first row and
+     allowing every action to wrap below it without overlapping hit areas. */
+  html[data-dmf] [class*="_titleRow"]:has(> [class*="_titleCluster"] > [class*="_headerActions"]) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-rows: minmax(35px, auto) auto;
+    gap: 6px 8px;
+    padding-inline-start: 0;
+  }
+
+  html[data-dmf] [class*="_titleRow"] > [class*="_titleCluster"]:has(> [class*="_headerActions"]) {
+    display: contents;
+  }
+
+  html[data-dmf] [class*="_titleCluster"]:has(> [class*="_headerActions"]) > [class*="_crumbs"] {
+    grid-column: 1;
+    grid-row: 1;
+    padding-inline-start: max(0px, calc(var(--dsh-frame-leading-clearance, 0px) - 20px));
+  }
+
+  html[data-dmf] [class*="_titleCluster"] > [class*="_headerActions"] {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    flex-wrap: wrap;
+    min-width: 0;
+    gap: 4px 8px;
+  }
+
+  html[data-dmf] [class*="_titleRow"]:has(> [class*="_titleCluster"] > [class*="_headerActions"]) > [class*="_headerUtilities"] {
+    grid-column: 2;
+    grid-row: 1;
+    margin-left: 0;
+  }
+
+  html[data-dmf] [class*="_titleRow"]:has(> [class*="_titleCluster"] > [class*="_headerActions"]) > [class*="_headerCorner"] {
+    grid-column: 3;
+    grid-row: 1;
   }
 
   /* Full-page panels (plugins, automation, …) start their title at the top-left
