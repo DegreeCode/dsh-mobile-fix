@@ -16,11 +16,12 @@ const SWIPE_DISTANCE = 60
  * @param {object} options
  * @param {{ toggleSidebar(): void, panelInfo?: { getSnapshot(): { activePanelId: unknown }, subscribe(listener: () => void): () => void } }} options.layout - ctx.layout
  * @param {string} options.css - stylesheet text (src/mobile.css)
+ * @param {{ getSnapshot(): { enabled: boolean }, subscribe(listener: () => void): () => void }} options.preference
  * @param {Document} [options.doc]
  * @param {Window} [options.win]
  * @returns {() => void} undo everything this call did
  */
-export function install({ layout, css, doc = document, win = window }) {
+export function install({ layout, css, preference, doc = document, win = window }) {
   const html = doc.documentElement
   // The macOS and Windows desktop shells keep their own window chrome and layout.
   if (html.dataset.platform === 'darwin' || html.hasAttribute('data-windows-titlebar')) return () => {}
@@ -76,6 +77,7 @@ export function install({ layout, css, doc = document, win = window }) {
   listen(media, 'change', syncViewport)
   cleanups.push(restoreHeight)
   syncViewport()
+  cleanups.push(installHeaderActions({ doc, win, media, preference }))
 
   const frame = () => doc.querySelector('[data-shell-bottom]')?.parentElement ?? null
   const collapsed = () => frame()?.hasAttribute('data-sidebar-collapsed') ?? true

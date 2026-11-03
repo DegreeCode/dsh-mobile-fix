@@ -33,10 +33,16 @@ dsh plugin --profile <プロファイル> add github:DegreeCode/dsh-mobile-fix
 dsh plugin --profile <プロファイル> add ./dsh-mobile-fix
 
 # リリースのアーカイブから（GitHub Releases の .tgz）
-dsh plugin --profile <プロファイル> add ./dsh-mobile-fix-1.0.0.tgz
+dsh plugin --profile <プロファイル> add ./dsh-mobile-fix-1.1.0.tgz
 ```
 
 アプリ内では **設定 → プラグイン → インストール** からもインストールできます。削除は `dsh plugin --profile <プロファイル> remove dsh-mobile-fix` です。削除または無効化すると、追加したスタイル、ボタン、属性、viewport 設定はすべて元に戻ります。
+
+## モバイルの上部操作
+
+**設定 → 一般 → 上部の操作をアイコンで表示**で切り替えます。初期値はオンで、エージェントチーム・サブエージェント・バックグラウンドジョブを、40px のタッチ領域と状態・件数バッジを持つアイコンで表示します。オフにすると文字も表示し、幅が足りない場合は折り返して重なりを防ぎます。選択はアプリのユーザー設定に保存されます。
+
+短いタップで機能を直接開き、長押しでは機能と現在の状態を説明するツールチップだけを表示します。マウスのホバーやキーボードのフォーカスでも説明を確認できます。アイコン表示はモバイル幅だけに適用されます。
 
 ## 仕組み
 
@@ -51,8 +57,9 @@ dsh plugin --profile <プロファイル> add ./dsh-mobile-fix-1.0.0.tgz
 |---|---|
 | `src/mobile.css` | スタイルの原本 |
 | `src/runtime.js` | メニューボタン、背景、ドロワーの自動クローズ、スワイプ、viewport 設定 |
+| `src/header.js`、`src/settings.js` | 操作アイコン、ツールチップ、一般設定の切り替えと保存状態 |
 | `client.js` | ブラウザモジュール。`npm run build` が `src/` から生成します。 |
-| `index.js`、`cordis.patch.yml` | ホスト側の空プラグインとバンドルパッチ |
+| `index.js`、`cordis.patch.yml` | ホスト設定スキーマとバンドルパッチ |
 | `locale/*.json`、`icon.svg` | プラグイン一覧に表示される名前、説明、アイコン |
 | `scripts/check-upstream.mjs` | Harness のチェックアウトに、このプラグインが依存するクラス、属性、レイアウトサービスが残っているかを確認 |
 | `tests/runtime.test.mjs` | AppFrame と同じ形の DOM（jsdom）で `client.js` の動作を確認 |

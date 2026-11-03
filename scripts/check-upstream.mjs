@@ -48,7 +48,7 @@ for (const name of names) {
   else problems.push(`class .${name} is not declared by any packages/client/**/*.module.css`)
 }
 
-const runtime = readFileSync(join(root, 'src/runtime.js'), 'utf8')
+const runtime = ['runtime.js', 'header.js', 'settings.js'].map(name => readFileSync(join(root, 'src', name), 'utf8')).join('\n')
 const attributes = [...new Set([...`${css}\n${runtime}`.matchAll(/\b(data-(?!dmf)[a-z-]+)/g)].map(match => match[1]))].sort()
 for (const attribute of attributes) {
   if (!sources.includes(attribute)) problems.push(`attribute ${attribute} is not rendered by packages/client`)

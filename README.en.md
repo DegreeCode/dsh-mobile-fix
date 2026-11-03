@@ -33,10 +33,16 @@ dsh plugin --profile <profile> add github:DegreeCode/dsh-mobile-fix
 dsh plugin --profile <profile> add ./dsh-mobile-fix
 
 # From a release tarball (the .tgz from GitHub Releases)
-dsh plugin --profile <profile> add ./dsh-mobile-fix-1.0.0.tgz
+dsh plugin --profile <profile> add ./dsh-mobile-fix-1.1.0.tgz
 ```
 
 Inside the app you can also install it from **Settings → Plugins → Install**. To remove it, run `dsh plugin --profile <profile> remove dsh-mobile-fix`. Removing or disabling the plugin reverts the styles, buttons, attributes and viewport settings it added.
+
+## Mobile header actions
+
+Open **Settings → General → Show header actions as icons**. Enabled by default, it shows agent teams, subagents and background jobs as icons with 40px touch targets and status/count badges. Turn it off to show text labels; actions wrap when needed to avoid overlapping. The choice is stored in the app's user settings.
+
+A short tap opens the action immediately. A long press only shows a tooltip explaining the action and its current status. Mouse hover and keyboard focus also show the explanation. Icon mode only affects mobile widths.
 
 ## How it works
 
@@ -51,8 +57,9 @@ Inside the app you can also install it from **Settings → Plugins → Install**
 |---|---|
 | `src/mobile.css` | Stylesheet source |
 | `src/runtime.js` | Menu button, backdrop, drawer auto-close, swipe, viewport settings |
+| `src/header.js`, `src/settings.js` | Action icons, tooltips, General setting and save state |
 | `client.js` | Browser module, generated from `src/` by `npm run build` |
-| `index.js`, `cordis.patch.yml` | Empty host-side plugin and bundle patch |
+| `index.js`, `cordis.patch.yml` | Host settings schema and bundle patch |
 | `locale/*.json`, `icon.svg` | Name, description and icon shown in the plugin list |
 | `scripts/check-upstream.mjs` | Checks that the classes, attributes and layout service this plugin relies on still exist in a Harness checkout |
 | `tests/runtime.test.mjs` | Runs `client.js` against a DOM shaped like AppFrame (jsdom) |

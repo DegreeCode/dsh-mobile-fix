@@ -1,6 +1,6 @@
 {
   "name": "dsh-mobile-fix",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Mobile layout fixes for the DeepSeek Harness web UI",
   "license": "MIT",
   "repository": {
@@ -40,7 +40,12 @@
     "check:upstream": "node scripts/check-upstream.mjs"
   },
   "devDependencies": {
-    "jsdom": "^26.1.0"
+    "jsdom": "^26.1.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "~3.18.5"
   },
   "dsh": {
     "bundle": {
@@ -50,7 +55,10 @@
       "platform": "web",
       "immediately": true,
       "inject": [
-        "@deepseek-ai/dsh-client-ui-layout"
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-locale"
       ]
     }
   }

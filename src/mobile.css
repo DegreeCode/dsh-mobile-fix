@@ -1,9 +1,10 @@
 /*
  * DeepSeek Harness mobile layout fixes.
  *
- * Every rule is gated twice: html[data-dmf] is set by the client module only in
- * a browser layout (not the macOS or Windows desktop shells), and the media
- * queries keep the desktop layout untouched above 767px. Harness styles are CSS
+ * Layout rules are gated twice: html[data-dmf] is set by the client module only
+ * in a browser layout (not the macOS or Windows desktop shells), and media
+ * queries keep the desktop layout untouched above 767px. The settings row is
+ * available at every browser width. Harness styles are CSS
  * modules whose class names look like `<hash>_<localName>`, so components are
  * matched by the `_<localName>` suffix; scripts/check-upstream.mjs verifies that
  * each local name used here still exists in a Harness checkout.
@@ -11,8 +12,36 @@
 
 /* Plugin-owned chrome exists on every page but only shows in the mobile layout. */
 [data-dmf-menu],
-[data-dmf-backdrop] {
+[data-dmf-backdrop],
+[data-dmf-action-icon],
+[data-dmf-action-count],
+[data-dmf-tooltip] {
   display: none;
+}
+
+html[data-dmf] [data-dmf-setting] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 0;
+  border-bottom: 0.5px solid var(--dsw-alias-border-l2);
+}
+
+html[data-dmf] [data-dmf-setting] > :first-child {
+  min-width: 0;
+}
+
+html[data-dmf] [data-dmf-setting-title] {
+  font-size: 14px;
+  line-height: 20px;
+}
+
+html[data-dmf] [data-dmf-setting-description] {
+  margin-top: 4px;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 18px;
 }
 
 @media (max-width: 767px) {
@@ -131,6 +160,89 @@
   html[data-dmf] [class*="_titleRow"]:has(> [class*="_titleCluster"] > [class*="_headerActions"]) > [class*="_headerCorner"] {
     grid-column: 3;
     grid-row: 1;
+  }
+
+  /* Default compact mode keeps all three task controls beside the title.
+     The text mode above remains a wrapping second row, preserving hit areas. */
+  html[data-dmf][data-dmf-icons] [class*="_titleRow"]:has(> [class*="_titleCluster"] > [class*="_headerActions"]) {
+    display: flex;
+    flex-wrap: wrap;
+    min-height: 40px;
+    gap: 4px;
+  }
+
+  html[data-dmf][data-dmf-icons] [class*="_titleCluster"]:has(> [class*="_headerActions"]) > [class*="_crumbs"] {
+    flex: 1 1 38px;
+    min-width: 38px;
+    box-sizing: border-box;
+  }
+
+  html[data-dmf][data-dmf-icons] [class*="_titleCluster"] > [class*="_headerActions"] {
+    max-width: 132px;
+    gap: 2px;
+  }
+
+  html[data-dmf][data-dmf-icons] button[data-dmf-action] {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0;
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+
+  html[data-dmf][data-dmf-icons] button[data-dmf-action] > :not([data-dmf-action-icon]):not([data-dmf-action-count]):not([class*="_activitySlot"]):not([class*="_triggerDot"]) {
+    display: none;
+  }
+
+  html[data-dmf][data-dmf-icons] [data-dmf-action-icon] {
+    display: inline-flex;
+  }
+
+  html[data-dmf][data-dmf-icons] [data-dmf-action-count]:not(:empty) {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: block;
+    max-width: 28px;
+    padding: 0 2px;
+    overflow: hidden;
+    border-radius: var(--dsw-radius-xs, 4px);
+    background: var(--dsw-alias-bg-base, #fff);
+    color: var(--dsw-alias-label-secondary);
+    font-size: 10px;
+    line-height: 13px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  html[data-dmf][data-dmf-icons] button[data-dmf-action] > :is([class*="_activitySlot"], [class*="_triggerDot"]) {
+    position: absolute;
+    top: 4px;
+    left: 2px;
+  }
+
+  html[data-dmf] [data-dmf-tooltip]:not([hidden]) {
+    position: fixed;
+    z-index: 1100;
+    display: block;
+    box-sizing: border-box;
+    width: max-content;
+    max-width: min(280px, calc(100vw - 16px));
+    padding: 5px 9px;
+    border-radius: var(--dsw-radius-sm, 8px);
+    background: var(--dsw-alias-tooltip-bg, #30343b);
+    color: var(--dsw-static-neutral-bluish-00, #fff);
+    font-size: 13px;
+    line-height: 20px;
+    overflow-wrap: anywhere;
+    pointer-events: none;
   }
 
   /* Full-page panels (plugins, automation, …) start their title at the top-left

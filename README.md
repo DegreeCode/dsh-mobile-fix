@@ -33,10 +33,16 @@ dsh plugin --profile <프로필> add github:DegreeCode/dsh-mobile-fix
 dsh plugin --profile <프로필> add ./dsh-mobile-fix
 
 # 릴리스 압축 파일로 (GitHub Releases에서 받은 .tgz)
-dsh plugin --profile <프로필> add ./dsh-mobile-fix-1.0.0.tgz
+dsh plugin --profile <프로필> add ./dsh-mobile-fix-1.1.0.tgz
 ```
 
 앱 안에서는 **설정 → 플러그인 → 설치**에서 설치할 수 있습니다. 제거는 `dsh plugin --profile <프로필> remove dsh-mobile-fix`입니다. 제거하거나 끄면 넣었던 스타일, 버튼, 속성, viewport 설정을 모두 되돌립니다.
+
+## 모바일 상단 작업 버튼
+
+**설정 → 일반 → 상단 작업 버튼을 아이콘으로 표시**에서 바꿀 수 있습니다. 기본은 켜짐이며, 에이전트 팀·서브에이전트·백그라운드 작업을 40px 터치 영역의 아이콘과 상태·개수 배지로 표시합니다. 끄면 텍스트를 함께 표시하고, 공간이 부족하면 줄을 나눠 버튼이 겹치지 않게 합니다. 선택값은 앱의 사용자 설정에 저장됩니다.
+
+짧게 탭하면 바로 해당 기능이 열립니다. 길게 누르면 기능과 현재 상태를 설명하는 툴팁만 표시하며, 마우스 호버나 키보드 포커스로도 설명을 볼 수 있습니다. 아이콘 모드는 모바일 화면에만 적용됩니다.
 
 ## 동작 방식
 
@@ -51,8 +57,9 @@ dsh plugin --profile <프로필> add ./dsh-mobile-fix-1.0.0.tgz
 |---|---|
 | `src/mobile.css` | 스타일 원본 |
 | `src/runtime.js` | 메뉴 버튼, 배경막, 서랍 자동 닫기, 스와이프, viewport 설정 |
+| `src/header.js`, `src/settings.js` | 작업 아이콘, 툴팁, 일반 설정 토글과 저장 상태 |
 | `client.js` | 브라우저 모듈. `npm run build`가 `src/`에서 생성합니다. |
-| `index.js`, `cordis.patch.yml` | 호스트 쪽 빈 플러그인과 번들 패치 |
+| `index.js`, `cordis.patch.yml` | 호스트 설정 스키마와 번들 패치 |
 | `locale/*.json`, `icon.svg` | 플러그인 목록에 표시되는 이름, 설명, 아이콘 |
 | `scripts/check-upstream.mjs` | Harness 체크아웃에 이 플러그인이 기대는 클래스, 속성, 레이아웃 서비스가 남아 있는지 확인 |
 | `tests/runtime.test.mjs` | AppFrame과 같은 모양의 DOM(jsdom)에서 `client.js` 동작 확인 |
