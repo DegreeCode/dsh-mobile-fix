@@ -4,91 +4,53 @@
 
 [![CI](https://github.com/DegreeCode/dsh-mobile-fix/actions/workflows/ci.yml/badge.svg)](https://github.com/DegreeCode/dsh-mobile-fix/actions/workflows/ci.yml)
 
-A plugin that makes the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) web UI comfortable to use on a phone. It does not patch the Harness itself: a single client module (`dsh.client`) adds a stylesheet and a few behaviours.
+Mobile input and header action improvements for the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) web UI. Requires **Harness 0.2.2-rc.1 or later**; the pinned verification baseline is `dsh-v0.2.2-rc.1` (`66491b05e3`).
 
-It only takes effect at viewport widths of 767px or less. Wider screens and the macOS and Windows desktop apps are left untouched.
+The native Harness owns the sidebar drawer, opener, backdrop, Escape dismissal, fullscreen Settings and horizontal tabs. Version 1.2.0 removes the duplicate implementations and obsolete Settings, touch-row and Appearance CSS. Use plugin 1.1.1 with older Harness versions.
 
-## What changes
+## Features
 
-| Problem (as of 0.2.1-rc.3) | New behaviour |
-|---|---|
-| The collapsed sidebar rail always takes 56px (about 1/7) of a 390px screen | The rail is removed and only a menu button sits in the top-left corner. Content uses the full width. |
-| Expanding the sidebar pushes the content aside until text wraps one character per line | The sidebar opens as a drawer above the content, over a dimmed backdrop. |
-| Picking a session in the sidebar leaves the sidebar open | The drawer closes after choosing a session, starting a new one, or opening a page such as Plugins or Automation. Tapping the backdrop, pressing Esc or swiping left also closes it. Swiping right from the left edge opens it. |
-| Settings is an 800px card with a 188px vertical menu, leaving ~120px per row, so text wraps one character per line | Settings opens as a full-screen sheet with the section menu as a horizontally scrolling tab strip. A row's description and its control wrap onto separate lines when space runs out. |
-| The three Appearance cards (light, dark, system) stack vertically and fill a whole screen | They sit in one row of three. |
-| On touch devices the pin, archive and menu buttons on session rows only appear on mouse hover and cannot be tapped | They stay visible on the selected session and on workspace rows, and the 16px icons get a 32px touch target. |
-| Input text is 14px, so iOS zooms the page when a field is focused | Input fields use 16px text on phones. |
-| The notch and home indicator cover content, and the keyboard covers the composer | Adds `viewport-fit=cover` and `interactive-widget=resizes-content` and pads for safe-area insets. |
+- At widths up to 767px, show agent teams, subagents and background jobs as 40px icons with activity/count badges. Text mode wraps actions when needed.
+- Swipe right from the left edge to open the native drawer, or left on the drawer or backdrop to close it. Other active modals block gestures.
+- Close the drawer after choosing a session or starting a new one. Harness handles page navigation and Escape.
+- Add viewport metadata, safe-area padding and visual viewport height tracking for cutouts, home indicators and software keyboards.
+- Use 16px mobile input text to reduce iOS focus zoom and let long Settings descriptions wrap apart from controls.
+
+Layout rules apply to web widths up to 767px. macOS and Windows desktop shells are excluded. The preference row is also available in wider web windows.
 
 ## Installation
 
-Install into a profile with the `dsh` CLI.
-
 ```bash
-# From the Git repository (client.js is committed, so no build step is needed)
 dsh plugin --profile <profile> add github:DegreeCode/dsh-mobile-fix
-
-# From a local folder
+# Or use a local folder / release package:
 dsh plugin --profile <profile> add ./dsh-mobile-fix
-
-# From a release tarball (the .tgz from GitHub Releases)
-dsh plugin --profile <profile> add ./dsh-mobile-fix-1.1.1.tgz
+dsh plugin --profile <profile> add ./dsh-mobile-fix-1.2.0.tgz
 ```
 
-Inside the app you can also install it from **Settings → Plugins → Install**. To remove it, run `dsh plugin --profile <profile> remove dsh-mobile-fix`. Removing or disabling the plugin reverts the styles, buttons, attributes and viewport settings it added.
+You can also use **Settings → Plugins → Install**. Remove it with `dsh plugin --profile <profile> remove dsh-mobile-fix`. Disabling it reverts its styles, attributes, viewport changes and event handlers.
 
-## Mobile header actions
+## Header actions
 
-Open **Settings → General → Show header actions as icons**. Enabled by default, it shows agent teams, subagents and background jobs as icons with 40px touch targets and status/count badges. Turn it off to show text labels; actions wrap when needed to avoid overlapping. The choice is stored in the app's user settings.
+Use **Settings → General → Show header actions as icons**, enabled by default. The preference is saved in the native user settings. Turn it off to retain host text labels and allow wrapping.
 
-A short tap opens the action immediately; tapping the same button again closes it. A long press only shows a tooltip explaining the action and its current status. Mouse hover and keyboard focus also show the explanation. A long-press explanation stays after release until an outside press, scrolling or Escape. The icon strip stays on one line and scrolls horizontally only when the screen is too narrow. Icon mode only affects mobile widths.
+Tap to open an action; tap again to close it. Long press shows an explanation that stays after release until an outside press, scrolling or Escape. Mouse hover and keyboard focus also explain actions. Icons stay in one row with horizontal scrolling on very narrow screens.
 
-## How it works
-
-- Harness styles are CSS modules, so class names look like `<hash>_<name>`. The hash can change between builds, so elements are matched by the name part only (for example `[class*="_sidebarCol"]`), narrowed by structural conditions such as `:has(> [data-shell-bottom])`.
-- The sidebar is opened and closed through the Harness layout service (`ctx.layout.toggleSidebar()`) rather than by clicking DOM buttons. Its open state is read from the `data-sidebar-collapsed` attribute that `AppFrame` publishes.
-- Every rule sits under `html[data-dmf]`, so nothing applies once the plugin is turned off, even if the stylesheet is still present.
-- Upstream `master` already contains part of a narrow-screen layout for the Settings panel (not yet released). This plugin's Settings rules aim for the same arrangement (title and close / horizontal tabs / content), but the screens were only checked on the `0.2.1-rc.3` release. When a new release comes out, check the `Upstream master` CI result and the actual screens again.
-
-## Layout
-
-| Path | Role |
-|---|---|
-| `src/mobile.css` | Stylesheet source |
-| `src/runtime.js` | Menu button, backdrop, drawer auto-close, swipe, viewport settings |
-| `src/header.js`, `src/settings.js` | Action icons, tooltips, General setting and save state |
-| `client.js` | Browser module, generated from `src/` by `npm run build` |
-| `index.js`, `cordis.patch.yml` | Host settings schema and bundle patch |
-| `locale/*.json`, `icon.svg` | Name, description and icon shown in the plugin list |
-| `scripts/check-upstream.mjs` | Checks that the classes, attributes and layout service this plugin relies on still exist in a Harness checkout |
-| `tests/runtime.test.mjs` | Runs `client.js` against a DOM shaped like AppFrame (jsdom) |
-
-## Development
+## Development and validation
 
 ```bash
-npm install
-npm run build     # src/ → client.js
-npm run check     # client.js matches src/
-npm test          # runtime tests
-node scripts/check-upstream.mjs <dsh checkout>   # compare with upstream structure
+npm ci
+npm run build
+npm run check
+npm test
+node scripts/check-upstream.mjs <Harness-checkout>
 ```
 
-After editing `src/`, regenerate `client.js` with `npm run build` and commit it together.
+Edit `src/mobile.css`, `src/runtime.js`, `src/header.js` and `src/settings.js`, then regenerate `client.js`. The plugin reads native drawer markers and calls `ctx.layout.toggleSidebar()`.
 
-## CI/CD
+Runtime tests use a jsdom fixture with the native dialog, opener and backdrop. They cover duplicate UI prevention, gestures, modal blocking, delayed mounting, cleanup, actions and saved settings. The upstream check verifies selectors, marker ownership and the 768px native drawer breakpoint. Physical phone keyboard testing remains separate.
 
-- **CI** (`.github/workflows/ci.yml`): runs on push, on PRs and weekly (Mondays 00:00 UTC).
-  - `Package`: checks that `client.js` matches `src/`, module syntax, metadata, runtime tests and the packed file list.
-  - `Upstream base`: runs `check-upstream.mjs` against the pinned release `dsh-v0.2.1-rc.3` (`1f81c047fc`). A failure fails CI.
-  - `Upstream master`: runs the same check against the latest upstream `master`. It exists to warn early about structural changes in the Harness, so a failure does not block CI.
-- **CD** (`.github/workflows/release.yml`): pushing a `v<version>` tag that matches the version in `package.json` runs the checks, builds a `.tgz` and attaches it to a GitHub Release. If the repository has an `NPM_TOKEN` secret, it is also published to npm.
-
-```bash
-npm version patch   # bump package.json and create the tag
-git push --follow-tags
-```
+CI requires package checks and the pinned `0.2.2-rc.1` structure check. The latest `master` check reports drift. Pushing a matching `v<version>` tag creates a GitHub Release with a `.tgz`; npm publication runs when `NPM_TOKEN` is configured.
 
 ## License
 
-MIT. Selectors and layout values follow the structure of DeepSeek Harness (MIT, Copyright (c) 2026 DeepSeek).
+MIT. Layout selectors follow DeepSeek Harness (MIT, Copyright (c) 2026 DeepSeek).

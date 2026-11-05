@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "移动端布局优化",
-    "description": "在手机上将侧边栏改为抽屉，将设置改为全屏显示，并修复触控与缩放问题。"
+    "description": "为 Harness 0.2.2-rc.1 及更新版 Web UI 添加顶部操作图标、本体抽屉手势与移动 viewport、输入优化。"
   }
 }

@@ -4,7 +4,7 @@
 // - every CSS-module local name matched by `[class*="_name"]` in src/mobile.css is declared by some
 //   packages/client/**/*.module.css,
 // - the DOM attributes the runtime reads are still rendered,
-// - ctx.layout still offers toggleSidebar() and panelInfo, and the frame still switches to its
+// - ctx.layout still offers toggleSidebar(), and the frame still switches to its
 //   narrow (auto-collapsed) sidebar above the 767px breakpoint used here.
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
@@ -56,12 +56,25 @@ for (const attribute of attributes) {
 }
 
 const service = readFileSync(join(client, 'ui-layout/src/client/service.ts'), 'utf8')
-for (const member of ['toggleSidebar(): void', 'readonly panelInfo: HostObservable<PanelInfo>']) {
+for (const member of ['toggleSidebar(): void']) {
   if (!service.includes(member)) problems.push(`ILayout no longer declares \`${member}\` (ui-layout/src/client/service.ts)`)
 }
 const columns = readFileSync(join(client, 'ui-layout/src/client/columns.ts'), 'utf8')
 const autoCollapse = Number(columns.match(/export const SIDEBAR_AUTO_COLLAPSE = (\d+)/)?.[1])
 if (!(autoCollapse >= 768)) problems.push(`SIDEBAR_AUTO_COLLAPSE is ${autoCollapse}; the drawer needs the narrow sidebar mode at <=767px`)
+
+const drawerBreakpoint = Number(columns.match(/export const SIDEBAR_DRAWER_BREAKPOINT = (\d+)/)?.[1])
+if (drawerBreakpoint !== 768) problems.push(`SIDEBAR_DRAWER_BREAKPOINT is ${drawerBreakpoint}; expected native drawer below 768px`)
+const nativeSources = [
+  ['ui-layout/src/client/AppFrame.tsx', ['data-sidebar-drawer', 'data-sidebar-mask', 'data-shell-leading']],
+  ['ui-sidebar/src/client/HeaderLeadingControls.tsx', ['data-sidebar-opener']],
+]
+for (const [file, attributes] of nativeSources) {
+  const source = readFileSync(join(client, file), 'utf8')
+  for (const attribute of attributes) {
+    if (!source.includes(attribute)) problems.push(`${file} no longer renders ${attribute}`)
+  }
+}
 
 let revision = ''
 try { revision = readFileSync(join(dsh, 'package.json'), 'utf8').match(/"version":\s*"([^"]+)"/)?.[1] ?? '' } catch {}

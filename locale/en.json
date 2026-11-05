@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Mobile layout fixes",
-    "description": "Turns the sidebar into a drawer, makes Settings a full-screen sheet and fixes touch and zoom issues on phones."
+    "description": "Adds header action icons, native drawer gestures and mobile viewport/input improvements for Harness 0.2.2-rc.1 and later."
   }
 }

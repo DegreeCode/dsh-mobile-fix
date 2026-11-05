@@ -8,9 +8,9 @@ import * as React from 'react'
 const CLIENT = readFileSync(new URL('../client.js', import.meta.url), 'utf8')
 
 const FRAME = `
-  <div class="pI_x6G_frame" data-sidebar-collapsed="true">
+  <div class="pI_x6G_frame" data-sidebar-drawer data-sidebar-collapsed="true">
     <div class="pI_x6G_sidebarCol">
-      <div class="hHd-Xa_root">
+      <div class="hHd-Xa_root" role="dialog" data-shortcut-modal="sidebar">
         <button class="hHd-Xa_newSession">New session</button>
         <div role="tree">
           <div role="treeitem" class="YDXeBa_sessionRow" data-row-key="session:a"><span class="YDXeBa_title">A</span><button class="YDXeBa_iconButton">pin</button></div>
@@ -21,6 +21,8 @@ const FRAME = `
     </div>
     <div class="pI_x6G_centerCol"></div>
     <div class="pI_x6G_rightbarCol"></div>
+    <div data-sidebar-mask></div>
+    <div data-shell-leading><button data-sidebar-opener>Open sidebar</button></div>
     <div class="pI_x6G_bottomRow" data-shell-bottom></div>
   </div>`
 
@@ -29,7 +31,7 @@ const ACTIONS = `<header><div class="host_titleRow"><div class="host_titleCluste
   <div data-slot="conversation.session.header.actions">
     <div><button id="team" class="team_trigger" aria-label="에이전트 팀" aria-expanded="false"><svg></svg><span class="team_triggerLabel">에이전트 팀</span></button></div>
     <div><button id="subagents" class="sub_trigger" aria-haspopup="tree" aria-label="서브에이전트 8개" aria-expanded="false"><span>8 agents</span><svg></svg></button></div>
-    <div><button id="jobs" class="jobs_trigger" aria-label="백그라운드 작업 3개 실행 중" aria-expanded="false"><span class="jobs_triggerDot"></span><span class="jobs_count">백그라운드 작업 3개 실행 중</span><svg></svg></button></div>
+    <div><button id="jobs" class="jobs_trigger" aria-label="백그라운드 작업 3개 실행 중" aria-expanded="false"><svg data-state="ongoing" aria-hidden="true"></svg><span class="jobs_count">백그라운드 작업 3개 실행 중</span><svg></svg></button></div>
     <button id="other">Other action</button>
   </div></div></div><div class="host_headerUtilities"></div><div class="host_headerCorner"></div></div></header>`
 const ACTION_FRAME = FRAME.replace('<div class="pI_x6G_centerCol"></div>', `<div class="pI_x6G_centerCol">${ACTIONS}</div>`)
@@ -56,6 +58,8 @@ function setup({ mobile = true, platform, body = FRAME, viewport = { height: 844
       subscribe: fn => { panelListeners.add(fn); return () => panelListeners.delete(fn) },
     },
   }
+  window.document.querySelector('[data-sidebar-opener]')?.addEventListener('click', () => layout.toggleSidebar())
+  window.document.querySelector('[data-sidebar-mask]')?.addEventListener('click', () => layout.toggleSidebar())
   const selectPanel = id => { panel = id; for (const fn of panelListeners) fn() }
 
   let module
@@ -105,33 +109,28 @@ test('registers as dsh-mobile-fix and injects layout and native settings service
   const { module, document } = setup()
   assert.equal(module.id, 'dsh-mobile-fix')
   assert.deepEqual([...module.inject], ['layout', 'slots', 'locale', 'configForms'])
-  assert.ok(document.querySelector('style[data-dmf-style]').textContent.includes('_sidebarCol'))
+  assert.ok(document.querySelector('style[data-dmf-style]').textContent.includes('data-sidebar-drawer'))
 })
 
-test('menu button opens the drawer and the backdrop closes it', async () => {
-  const { document, html, layout, flush } = setup()
-  const menu = document.querySelector('[data-dmf-menu]')
-  assert.equal(menu.getAttribute('aria-label'), '사이드바 열기')
+test('uses the native opener and mask without adding drawer chrome or padding state', async () => {
+  const { document, html, layout, flush, dispose } = setup()
+  assert.equal(document.querySelectorAll('[data-sidebar-opener]').length, 1)
+  assert.equal(document.querySelectorAll('[data-sidebar-mask]').length, 1)
+  assert.equal(document.querySelector('[data-dmf-menu], [data-dmf-backdrop]'), null)
+  document.querySelector('[data-sidebar-opener]').click()
+  await flush()
+  assert.equal(layout.toggles, 1)
   assert.equal(html.hasAttribute('data-dmf-drawer'), false)
-
-  menu.click()
-  await flush()
-  assert.equal(layout.toggles, 1)
-  assert.equal(html.hasAttribute('data-dmf-drawer'), true)
-  assert.equal(menu.getAttribute('aria-expanded'), 'true')
-
-  menu.click() // already open: no second toggle
-  assert.equal(layout.toggles, 1)
-
-  document.querySelector('[data-dmf-backdrop]').click()
-  await flush()
+  assert.equal(html.hasAttribute('data-dmf-panel'), false)
+  document.querySelector('[data-sidebar-mask]').click()
   assert.equal(layout.toggles, 2)
-  assert.equal(html.hasAttribute('data-dmf-drawer'), false)
+  dispose()
+  assert.equal(document.querySelectorAll('[data-sidebar-opener], [data-sidebar-mask]').length, 2)
 })
 
 test('choosing a session or a new session closes the drawer; row actions do not', async () => {
   const { document, layout, flush, frame } = setup()
-  document.querySelector('[data-dmf-menu]').click()
+  document.querySelector('[data-sidebar-opener]').click()
 
   document.querySelector('.YDXeBa_iconButton').click()
   await flush()
@@ -145,39 +144,28 @@ test('choosing a session or a new session closes the drawer; row actions do not'
   await flush()
   assert.equal(frame().hasAttribute('data-sidebar-collapsed'), true)
 
-  document.querySelector('[data-dmf-menu]').click()
+  document.querySelector('[data-sidebar-opener]').click()
   document.querySelector('.hHd-Xa_newSession').click()
   await flush()
   assert.equal(frame().hasAttribute('data-sidebar-collapsed'), true)
   assert.equal(layout.toggles, 4)
 })
 
-test('Escape closes the drawer unless a field or menu consumes it', async () => {
-  const { window, document, frame } = setup()
-  const escape = target => target.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
-  document.querySelector('[data-dmf-menu]').click()
-
-  escape(document.querySelector('.bhn1Oq_search'))
-  assert.equal(frame().hasAttribute('data-sidebar-collapsed'), false)
-
-  const menu = document.body.appendChild(document.createElement('div'))
-  menu.setAttribute('role', 'menu')
-  escape(document.body)
-  assert.equal(frame().hasAttribute('data-sidebar-collapsed'), false)
-  menu.remove()
-
-  escape(document.body)
-  assert.equal(frame().hasAttribute('data-sidebar-collapsed'), true)
+test('leaves Escape dismissal to the native modal handler', () => {
+  const { window, document, layout } = setup()
+  document.querySelector('[data-sidebar-opener]').click()
+  document.body.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+  assert.equal(layout.toggles, 1)
+  const nativeDismiss = event => { if (event.key === 'Escape') layout.toggleSidebar() }
+  document.addEventListener('keydown', nativeDismiss)
+  document.body.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+  assert.equal(layout.toggles, 2)
 })
 
-test('panel navigation closes the drawer and marks full-page panels', async () => {
-  const { html, selectPanel, frame, document, flush } = setup()
-  document.querySelector('[data-dmf-menu]').click()
+test('does not duplicate native panel navigation subscriptions or global padding markers', () => {
+  const { html, selectPanel, panelListeners } = setup()
   selectPanel('plugins')
-  await flush()
-  assert.equal(frame().hasAttribute('data-sidebar-collapsed'), true)
-  assert.equal(html.hasAttribute('data-dmf-panel'), true)
-  selectPanel(null)
+  assert.equal(panelListeners.size, 0)
   assert.equal(html.hasAttribute('data-dmf-panel'), false)
 })
 
@@ -203,9 +191,13 @@ test('edge swipe opens and a left swipe on the drawer closes', async () => {
   assert.equal(frame().hasAttribute('data-sidebar-collapsed'), true)
 })
 
-test('desktop widths leave the sidebar alone', () => {
-  const { document, layout, html } = setup({ mobile: false })
-  document.querySelector('[data-dmf-menu]').click()
+test('desktop widths leave native sidebar gestures alone', () => {
+  const { window, document, layout, html } = setup({ mobile: false })
+  for (const [type, x] of [['touchstart', 5], ['touchend', 100]]) {
+    const event = new window.Event(type, { bubbles: true })
+    Object.assign(event, { touches: [{ clientX: x, clientY: 100 }], changedTouches: [{ clientX: x, clientY: 100 }] })
+    document.body.dispatchEvent(event)
+  }
   assert.equal(layout.toggles, 0)
   assert.equal(html.style.getPropertyValue('--dmf-viewport-height'), '')
 })
@@ -533,4 +525,57 @@ test('native touch movement cancels a pending hold even after the pointer stream
   emit('touchmove', { touches: [{ ...point, clientX: 125 }] })
   await new Promise(resolve => window.setTimeout(resolve, 580))
   assert.equal(document.querySelector('[role="tooltip"]'), null)
+})
+
+test('another active modal blocks swipes but hidden and inert dialogs do not', () => {
+  const { window, document, layout } = setup()
+  const swipe = () => {
+    for (const [type, x] of [['touchstart', 5], ['touchend', 100]]) {
+      const event = new window.Event(type, { bubbles: true })
+      Object.assign(event, { touches: [{ clientX: x, clientY: 100 }], changedTouches: [{ clientX: x, clientY: 100 }] })
+      document.body.dispatchEvent(event)
+    }
+  }
+  const modal = document.body.appendChild(document.createElement('div'))
+  modal.setAttribute('role', 'dialog')
+  swipe()
+  assert.equal(layout.toggles, 0)
+  modal.hidden = true
+  swipe()
+  assert.equal(layout.toggles, 1)
+  layout.toggleSidebar()
+  modal.hidden = false
+  modal.setAttribute('inert', '')
+  swipe()
+  assert.equal(layout.toggles, 3)
+})
+
+test('a nested dialog inside the native sidebar still blocks gestures', () => {
+  const { window, document, layout } = setup()
+  const modal = document.querySelector('[data-shortcut-modal="sidebar"]').appendChild(document.createElement('div'))
+  modal.setAttribute('role', 'dialog')
+  for (const [type, x] of [['touchstart', 5], ['touchend', 100]]) {
+    const event = new window.Event(type, { bubbles: true })
+    Object.assign(event, { touches: [{ clientX: x, clientY: 100 }], changedTouches: [{ clientX: x, clientY: 100 }] })
+    document.body.dispatchEvent(event)
+  }
+  assert.equal(layout.toggles, 0)
+})
+
+test('gestures work when the native frame mounts after plugin activation and stop on dispose', () => {
+  const { window, document, layout, dispose } = setup({ body: '' })
+  document.body.innerHTML = FRAME
+  const swipe = () => {
+    for (const [type, x] of [['touchstart', 5], ['touchend', 100]]) {
+      const event = new window.Event(type, { bubbles: true })
+      Object.assign(event, { touches: [{ clientX: x, clientY: 100 }], changedTouches: [{ clientX: x, clientY: 100 }] })
+      document.body.dispatchEvent(event)
+    }
+  }
+  swipe()
+  assert.equal(layout.toggles, 1)
+  dispose()
+  layout.toggleSidebar()
+  swipe()
+  assert.equal(layout.toggles, 2)
 })
